@@ -45,6 +45,31 @@ Claude Code command:
   *Rationale*: The most important companion tool is LazyGit, allowing
   the easily partial backout of changes Claude Code made to source code.
 
+Impressions
+-----------
+
+The following is a main view of the macOS Terminal with a ClaudeX
+session running. Three Claude Code instances are running in separate
+panes of the screen.
+
+![screenshot](screenshot-1.png)
+
+This is with LazyGit opened in a modal window:
+
+![screenshot](screenshot-2.png)
+
+This is with LF opened in a modal window:
+
+![screenshot](screenshot-3.png)
+
+This is with SC opened in a modal window:
+
+![screenshot](screenshot-4.png)
+
+This is with Bash opened in a modal window:
+
+![screenshot](screenshot-5.png)
+
 Installation
 ------------
 
