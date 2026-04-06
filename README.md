@@ -7,7 +7,7 @@ environment for macOS and Linux. It mainly provides a thin `claudex` (claude eXt
 wrapper command which provides the following distinct features on top of the regular
 Claude Code command:
 
-- *Encapsulated Runtime*: It uses the companion tool
+- **Encapsulated Runtime**: It uses the companion tool
   [capsula](https://github.com/rse/capsula), also from RSE, for
   executing `claude` inside a cleverly established Docker container,
   which mimicks the host environment (filesystem layout, user/group
@@ -16,7 +16,7 @@ Claude Code command:
   *Rationale*: Prevents any programs `claude` spawns from
   damaging more than the current working directory.
 
-- *Adjusted Theme*: It uses the companion tool [ansi-recolor](https://github.com/rse/ansi-recolor),
+- **Adjusted Theme**: It uses the companion tool [ansi-recolor](https://github.com/rse/ansi-recolor),
   also from RSE, to on-the-fly re-color Claude Code's terminal UI
   (configured to run in regular light theme) into the RSE brown/blue
   color theme, without having to patch Claude Code (with tools like
@@ -26,7 +26,7 @@ Claude Code command:
   for him, implies that everthing has to use his unobtrusive brown/blue
   color theme.
 
-- *Terminal Multiplexing*: It uses the companion tool [tmux](https://github.com/tmux/tmux)
+- **Terminal Multiplexing**: It uses the companion tool [tmux](https://github.com/tmux/tmux)
   to run Claude Code and its companion tools in an opinionated virtual
   terminal environment, with multiple screens and multiple panes on each
   screen.
@@ -34,7 +34,7 @@ Claude Code command:
   *Rationale*: Allow one to easily run multiple Claude Code sessions in
   parallel with full terminal interaction.
 
-- *Companion Tools*: It allows you to execute (visually in a modal window on top
+- **Companion Tools**: It allows you to execute (visually in a modal window on top
   of Claude Code with the help of tmux popups) the companion tools
   [LazyGit](https://github.com/jesseduffield/lazygit) (for Git version
   control), [LF](https://github.com/gokcehan/lf) (for Filesystem
