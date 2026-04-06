@@ -40,7 +40,7 @@ Claude Code command:
   control), [LF](https://github.com/gokcehan/lf) (for Filesystem
   Browsing), and [SC](https://github.com/rse/bash-sc) (also from RSE,
   for File Searching), and [Bash](https://www.gnu.org/software/bash/)
-  (for Shell). 
+  (for Shell).
 
   *Rationale*: The most important companion tool is LazyGit, allowing
   the easily partial backout of changes Claude Code made to source code.
