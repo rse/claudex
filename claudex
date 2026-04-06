@@ -1,0 +1,323 @@
+#!/usr/bin/env bash
+##
+##  claudex -- Claude Code Extended
+##  Copyright (c) 2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+##  Licensed under MIT <https://spdx.org/licenses/MIT>
+##
+
+#   find our base directory
+basedir=""
+case "$0" in
+    /* )
+        #   absolute path
+        basedir=$(dirname "$0")
+        ;;
+    */* )
+        #   relative path
+        basedir=$(dirname "$0")
+        basedir=$(cd "$basedir" && pwd)
+        ;;
+    * )
+        if [[ -f "./$0" ]]; then
+            #   special case of local usage
+            basedir=$(pwd)
+        else
+            #   no path
+            OLD_IFS="$IFS"; IFS=":"
+            for p in $PATH; do
+                IFS="$OLD_IFS"
+                if [[ -f "$p/$0" ]]; then
+                    basedir="$p"
+                    break
+                fi
+            done
+            IFS="$OLD_IFS"
+        fi
+        ;;
+esac
+
+#   sanity check usage
+if [[ $# -eq 0 ]]; then
+    echo "claudex: ERROR: missing command" 1>&2
+    echo "claudex: USAGE: claudex install" 1>&2
+    echo "claudex: USAGE: claudex update" 1>&2
+    echo "claudex: USAGE: claudex session" 1>&2
+    echo "claudex: USAGE: claudex shell [...]" 1>&2
+    echo "claudex: USAGE: claudex claude [...]" 1>&2
+    exit 1
+fi
+
+#   helper function for raising a fatal error
+fatal () {
+    local msg="$*"
+    echo "claudex: ERROR: $msg" 1>&2
+    exit 1
+}
+
+#   helper function to ensure a tool is available
+ensureTool () {
+    local tool="$1"
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        fatal "required tool \"$tool\" not found in \$PATH"
+    fi
+}
+
+#   dispatch according to command
+cmd="$1"; shift
+case "$cmd" in
+    install )
+        #   sanity check environment
+        if [[ $ENVIRONMENT == "capsula" ]]; then
+            fatal "cannot execute \"install\" command from within Capsula environment"
+        fi
+
+        echo "++ update Debian GNU/Linux operating system"
+        $0 shell -s sudo -E apt update
+        $0 shell -s sudo -E apt upgrade -y
+
+        echo "++ install Tmux / LF / LazyGit / FZF / RipGrep / Git"
+        $0 shell -s sudo -E apt install -y tmux lf lazygit fzf ripgrep git
+
+        echo "++ install Bat"
+        $0 shell -s sudo -E apt install -y bat
+        $0 shell -s sudo -E ln -f /usr/bin/batcat /usr/bin/bat
+        cmd="export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
+        cmd="$cmd mkdir -p \$BAT_CONFIG_DIR/themes; cp $basedir/bat.tmTheme \$BAT_CONFIG_DIR/themes/;"
+        cmd="$cmd bat cache --build"
+        $0 shell -s sudo -E bash -c "$cmd"
+
+        echo "++ install Node.js"
+        $0 shell -s sudo -E bash -c "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -"
+        $0 shell -s sudo -E apt install -y nodejs
+        $0 shell -s sudo -E apt install -y binutils gcc g++ make
+
+        echo "++ install Claude Code"
+        $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; curl -kfsSL https://claude.ai/install.sh | bash"
+
+        echo "++ install ANSI-Recolor"
+        $0 shell -s sudo -E npm install -y -g ansi-recolor
+        ;;
+
+    update )
+        #   sanity check environment
+        if [[ $ENVIRONMENT == "capsula" ]]; then
+            fatal "cannot execute \"install\" command from within Capsula environment"
+        fi
+
+        echo "++ update Debian GNU/Linux operating system"
+        $0 shell -s sudo apt update
+        $0 shell -s sudo apt upgrade -y
+
+        echo "++ update Bat"
+        cmd="export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
+        cmd="$cmd mkdir -p \$BAT_CONFIG_DIR/themes; cp $basedir/bat.tmTheme \$BAT_CONFIG_DIR/themes/;"
+        cmd="$cmd bat cache --build"
+        $0 shell -s sudo -E bash -c "$cmd"
+
+        echo "++ update Claude Code"
+        $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; claude update"
+
+        echo "++ update ANSI-Recolor"
+        $0 shell -s sudo -E npm install -y -g ansi-recolor
+        ;;
+
+    session )
+        #   sanity check environment
+        if [[ $ENVIRONMENT == "capsula" ]]; then
+            fatal "cannot execute \"install\" command from within Capsula environment"
+        fi
+
+        #   support special "-h" (host) option
+        host=no
+        if [[ $# -ge 1 && $1 == "-h" ]]; then
+            shift
+            host=yes
+        fi
+
+        #   determine session name
+        session=default
+        if [[ $# -ge 1 ]]; then
+            session="$1"
+            shift
+        else
+            dir="$(pwd)"
+            while [[ "$dir" != "/" ]]; do
+                if [[ -f "$dir/AGENTS.md" || -f "$dir/CLAUDE.md" ]]; then
+                    session="$(basename "$dir")"
+                    break
+                fi
+                dir="$(dirname "$dir")"
+            done
+        fi
+
+        #   dispatch according to environment
+        if [[ $host == no ]]; then
+            #   enter/start container
+            container="capsula-$USER-debian-claude-$session"
+            if docker inspect $container >/dev/null 2>&1; then
+                #   enter already running container and run tmux
+                exec docker exec -i -t "$container" \
+                    bash -c "TERM=$TERM HOME=$HOME sudo -E -u $USER $0 util tmux new-session -A -s \"$session\""
+            else
+                #   start a new container and run tmux
+                exec $0 shell -C $container $0 util tmux new-session -A -s "$session" -n "claude" "$0 claude"
+            fi
+        else
+            #   enter/start plain tmux
+            exec $0 util tmux new-session -A -s "$session" -n "claude" "$0 claude"
+        fi
+        ;;
+
+    shell )
+        #   sanity check environment
+        ensureTool capsula
+        if [[ $ENVIRONMENT == "capsula" ]]; then
+            fatal "cannot execute \"shell\" command from within Capsula environment"
+        fi
+
+        #   define list of environment variables
+        envs=(
+            TERM
+            HOME
+        )
+        env_opts=(-e '!')
+        for env in "${envs[@]}"; do
+            env_opts+=(-e "$env")
+        done
+
+        #   find list of dot-files (relative to $HOME)
+        dotfiles=(
+            .inputrc
+            .dotfiles/inputrc
+            .bash_login
+            .bash_logout
+            .bashrc
+            .dotfiles/bashrc
+            .ssh/authorized_keys
+            .ssh/known_hosts!
+            .ssh/config
+            .dotfiles/sshconfig
+            .vimrc
+            .dotfiles/vimrc
+            .vim
+            .tmux.conf
+            .dotfiles/tmux.conf
+            .gitconfig
+            .dotfiles/gitconfig
+            .npmrc
+            .npm!
+            .cache!
+            .claude!
+            .claude.json!
+            .tweakcc!
+        )
+        dotfile_opts=(-m '!')
+        for dotfile in "${dotfiles[@]}"; do
+            path="${dotfile%!}"
+            if [ -e "$HOME/$path" ]; then
+                dotfile_opts+=(-m "$dotfile")
+            fi
+        done
+
+        #   find all sensitive ".env" files from current working
+        #   directory up to root directory for hiding
+        null_opts=(-n '!')
+        dir="$PWD"
+        while true; do
+            if [ -f "$dir/.env" ]; then
+                null_opts+=(-n "$dir/.env")
+            fi
+            if [ "$dir" = "/" ]; then
+                break
+            fi
+            dir="$(dirname "$dir")"
+        done
+
+        #   execute
+        exec capsula \
+            -c claude \
+            -t debian \
+            -P linux/arm64 \
+            "${env_opts[@]}" \
+            "${dotfile_opts[@]}" \
+            "${null_opts[@]}" \
+            -p '!' \
+            -e "CLAUDEX=$basedir" \
+            -b "$basedir" \
+            -b "/Users/rse/Work/ase" \
+            "$@"
+        #   FIXME: remove "-b /Users/rse/Work/ase" for non-debugging purposes
+        ;;
+
+    claude )
+        #   execute Claude Code
+        PATH=$HOME/.local/bin:$PATH
+        ensureTool ansi-recolor
+        ensureTool claude
+        ensureTool node
+        ensureTool npm
+        exec ansi-recolor \
+            -c $basedir/ansi-recolor.conf \
+            -m \
+            -n claude \
+            -t $HOME/claude-trace.txt \
+            claude \
+                --settings "$(sed <$basedir/claude-settings.json -e "s;@BASEDIR@;$basedir;g")" \
+                ${1+"$@"}
+        ;;
+
+    util )
+        util="$1"; shift
+        case "$util" in
+            tmux )
+                ensureTool tmux
+                exec tmux -f "$basedir/tmux.conf" \
+                    bind-key c   new-window    -c "#{pane_current_path}" -n "claude" "$0 claude" \; \
+                    bind-key "|" split-window  -c "#{pane_current_path}" -h          "$0 claude" \; \
+                    bind-key "-" split-window  -c "#{pane_current_path}" -v          "$0 claude" \; \
+                    bind-key g display-popup -E -w "95%" -h "95%" \
+                        -T "─◀#[reverse] ⧉ Version Control (lazygit) #[noreverse]▶" "$0 util lazygit" \; \
+                    bind-key b display-popup -E -w "95%" -h "95%" \
+                        -T "─◀#[reverse] ⧉ Shell (bash) #[noreverse]▶"              "$0 util bash" \; \
+                    bind-key s display-popup -E -w "95%" -h "95%" \
+                        -T "─◀#[reverse] ⧉ Search Content (sc) #[noreverse]▶"       "$0 util sc" \; \
+                    bind-key f display-popup -E -w "95%" -h "95%" \
+                        -T "─◀#[reverse] ⧉ File Browser (lf) #[noreverse]▶"         "$0 util lf" \; \
+                    ${1+"$@"}
+                ;;
+            sc )
+                ensureTool fzf
+                ensureTool rg
+                ensureTool bat
+                ensureTool vim
+                if [[ $ENVIRONMENT == "capsula" ]]; then
+                    export BAT_CONFIG_DIR=/etc/bat
+                    export BAT_CACHE_PATH=/etc/bat
+                    export BAT_THEME=bat
+                fi
+                exec bash $basedir/sc.bash ${1+"$@"}
+                ;;
+            lf )
+                ensureTool lf
+                ensureTool vim
+                exec lf -config $basedir/lf.conf ${1+"$@"}
+                ;;
+            bash )
+                ensureTool bash
+                exec bash -l ${1+"$@"}
+                ;;
+            lazygit )
+                ensureTool git
+                ensureTool lazygit
+                ensureTool vim
+                export TERM=xterm-color
+                exec lazygit -ucf $basedir/lazygit.yaml ${1+"$@"}
+                ;;
+        esac
+        ;;
+
+    * )
+        fatal "invalid command \"$cmd\""
+        ;;
+esac
+

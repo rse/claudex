@@ -1,0 +1,58 @@
+
+gui:
+    scrollHeight: 1
+    scrollPastBottom: false
+    commitLength:
+        show: false
+    authorColors:
+        "Ralf S. Engelschall": "red"
+        "*": "blue"
+    branchColorPatterns:
+        "*": "blue"
+    tabWidth: 4
+    mouseEvents: true
+    sidePanelWidth: 0.30
+    timeFormat: RFC3339
+    showFileTree: true
+    showNumstatInFilesView: true
+    showRandomTip: false
+    showCommandLog: true
+    commitAuthorShortLength: 2
+    commitAuthorLongLength: 20
+    commitHashLength: 0
+    expandFocusedSidePanel: true
+    expandedSidePanelWeight: 4
+    theme:
+        selectedLineBgColor:
+            - reverse
+            - default
+        activeBorderColor:
+            - red
+        inactiveBorderColor:
+            - white
+        optionsTextColor:
+            - blue
+
+git:
+    autoFetch: false
+    autoRefresh: true
+refresher:
+    refreshInterval: 4
+
+update:
+    method: mever
+    days: 1
+
+reporting: "off"
+
+confirmOnQuit: false
+quitOnTopLevelReturn: false
+disableStartupPopups: true
+promptToReturnFromSubprocess: false
+
+os:
+    open: code -r {{filename}}
+    openLink: open {{link}}
+    edit: vim {{filename}}
+    editAtLine: vim +{{line}} {{filename}}
+

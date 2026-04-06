@@ -1,0 +1,43 @@
+#!/usr/bin/env node
+/*
+**  claude-statusline
+*/
+
+const fs   = require("fs")
+const path = require("path")
+
+let input = ""
+process.stdin.on("data", (chunk) => {
+    input += chunk
+})
+process.stdin.on("end", () => {
+    const data  = JSON.parse(input)
+
+    const dir   = path.basename(data.workspace.current_dir)
+    const model = data.model.display_name
+    const pct   = Math.floor(data.context_window?.used_percentage ?? 0)
+    const cost  = data.cost?.total_cost_usd ?? 0
+    const ms    = data.cost?.total_duration_ms ?? 0
+
+    /* if (ms < 20000) return */
+
+    const DIM    = "\x1b[2m"
+    const BOLD   = "\x1b[1m"
+    const BLUE   = "\x1b[34m"
+    const YELLOW = "\x1b[33m"
+    const RED    = "\x1b[31m"
+    const RESET  = "\x1b[0m"
+
+    const barSize  = 20
+    const barColor = pct >= 80 ? RED : pct >= 60 ? YELLOW : pct >= 40 ? BLUE : RESET
+    const filled   = Math.round(pct / 100 * barSize)
+    const bar      = "█".repeat(filled) + "░".repeat(barSize - filled)
+
+    let output = ""
+    output += `${BLUE}⧉ ${BOLD}${dir}${RESET} `
+    output += `${RESET}⚙ ${RESET}${model}${RESET} `
+    output += `${barColor}◔ ${bar} ${pct}%${RESET}`
+
+    console.log(output)
+})
+
