@@ -54,10 +54,34 @@ if [[ $# -ge 1 && $1 == "-h" ]]; then
     host=yes
 fi
 
+#   determine terminal colors
+_term_colors=$(tput colors 2>/dev/null)
+if [[ -n $_term_colors && $_term_colors -ge 8 ]]; then
+    #   determine terminal color sequences
+    col_bd=$'\e[1m'
+    col_bl=$'\e[34m'
+    col_rd=$'\e[31m'
+    col_gr=$'\e[37m'
+    col_no=$'\e[0m'
+else
+    #   fallback to no coloring
+    col_bd=""
+    col_bl=""
+    col_rd=""
+    col_gr=""
+    col_no=""
+fi
+
+#   helper function for displaying info messages
+info () {
+    local msg="$*"
+    echo "${col_bl}claudex: ${col_bd}INFO:${col_no}${col_bl} $msg${col_no}" 1>&2
+}
+
 #   helper function for raising a fatal error
 fatal () {
     local msg="$*"
-    echo "claudex: ERROR: $msg" 1>&2
+    echo "${col_rd}claudex: ${col_bd}ERROR:${col_no}${col_rd} $msg${col_no}" 1>&2
     exit 1
 }
 
@@ -80,33 +104,33 @@ case "$cmd" in
 
         #   dispatch according to host/container mode
         if [[ $host == no ]]; then
-            echo "++ update Debian GNU/Linux operating system"
-            $0 shell -s sudo -E apt update
-            $0 shell -s sudo -E apt upgrade -y
+            info "update Debian GNU/Linux operating system"
+            $0 shell -s sudo -E apt update -qq
+            $0 shell -s sudo -E apt upgrade -qq -y
 
-            echo "++ install Tmux / LF / LazyGit / FZF / RipGrep / Git"
-            $0 shell -s sudo -E apt install -y tmux lf lazygit fzf ripgrep git
+            info "install Tmux / LF / LazyGit / FZF / RipGrep / Git"
+            $0 shell -s sudo -E apt install -qq -y tmux lf lazygit fzf ripgrep git
 
-            echo "++ install Bat"
-            $0 shell -s sudo -E apt install -y bat
+            info "install Bat"
+            $0 shell -s sudo -E apt install -qq -y bat
             $0 shell -s sudo -E ln -f /usr/bin/batcat /usr/bin/bat
             cmd="export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
             cmd="$cmd mkdir -p \$BAT_CONFIG_DIR/themes; cp $basedir/bat.tmTheme \$BAT_CONFIG_DIR/themes/;"
             cmd="$cmd bat cache --build"
             $0 shell -s sudo -E bash -c "$cmd"
 
-            echo "++ install Node.js"
+            info "install Node.js"
             $0 shell -s sudo -E bash -c "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -"
-            $0 shell -s sudo -E apt install -y nodejs
-            $0 shell -s sudo -E apt install -y binutils gcc g++ make
+            $0 shell -s sudo -E apt install -qq -y nodejs
+            $0 shell -s sudo -E apt install -qq -y binutils gcc g++ make
 
-            echo "++ install Claude Code"
+            info "install Claude Code"
             $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; curl -kfsSL https://claude.ai/install.sh | bash"
 
-            echo "++ install ANSI-Recolor"
+            info "install ANSI-Recolor"
             $0 shell -s sudo -E npm install -y -g ansi-recolor
         else
-            echo "++ install Claude Code (on host)"
+            info "install Claude Code (on host)"
             (PATH="$PATH:$HOME/.local/bin"; curl -kfsSL https://claude.ai/install.sh | bash)
         fi
         ;;
@@ -119,23 +143,23 @@ case "$cmd" in
 
         #   dispatch according to host/container mode
         if [[ $host == no ]]; then
-            echo "++ update Debian GNU/Linux operating system"
-            $0 shell -s sudo apt update
-            $0 shell -s sudo apt upgrade -y
+            info "update Debian GNU/Linux operating system"
+            $0 shell -s sudo apt update -qq
+            $0 shell -s sudo apt upgrade -qq -y
 
-            echo "++ update Bat"
+            info "update Bat"
             cmd="export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
             cmd="$cmd mkdir -p \$BAT_CONFIG_DIR/themes; cp $basedir/bat.tmTheme \$BAT_CONFIG_DIR/themes/;"
             cmd="$cmd bat cache --build"
             $0 shell -s sudo -E bash -c "$cmd"
 
-            echo "++ update Claude Code"
+            info "update Claude Code"
             $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; $HOME/.local/bin/claude update"
 
-            echo "++ update ANSI-Recolor"
+            info "update ANSI-Recolor"
             $0 shell -s sudo -E npm install -y -g ansi-recolor
         else
-            echo "++ update Claude Code (on host)"
+            info "update Claude Code (on host)"
             (PATH="$PATH:$HOME/.local/bin"; $HOME/.local/bin/claude update)
         fi
         ;;
