@@ -47,6 +47,13 @@ if [[ $# -eq 0 ]]; then
     exit 1
 fi
 
+#   support special "-h" (host) option
+host=no
+if [[ $# -ge 1 && $1 == "-h" ]]; then
+    shift
+    host=yes
+fi
+
 #   helper function for raising a fatal error
 fatal () {
     local msg="$*"
@@ -71,31 +78,37 @@ case "$cmd" in
             fatal "cannot execute \"install\" command from within Capsula environment"
         fi
 
-        echo "++ update Debian GNU/Linux operating system"
-        $0 shell -s sudo -E apt update
-        $0 shell -s sudo -E apt upgrade -y
+        #   dispatch according to host/container mode
+        if [[ $host == no ]]; then
+            echo "++ update Debian GNU/Linux operating system"
+            $0 shell -s sudo -E apt update
+            $0 shell -s sudo -E apt upgrade -y
 
-        echo "++ install Tmux / LF / LazyGit / FZF / RipGrep / Git"
-        $0 shell -s sudo -E apt install -y tmux lf lazygit fzf ripgrep git
+            echo "++ install Tmux / LF / LazyGit / FZF / RipGrep / Git"
+            $0 shell -s sudo -E apt install -y tmux lf lazygit fzf ripgrep git
 
-        echo "++ install Bat"
-        $0 shell -s sudo -E apt install -y bat
-        $0 shell -s sudo -E ln -f /usr/bin/batcat /usr/bin/bat
-        cmd="export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
-        cmd="$cmd mkdir -p \$BAT_CONFIG_DIR/themes; cp $basedir/bat.tmTheme \$BAT_CONFIG_DIR/themes/;"
-        cmd="$cmd bat cache --build"
-        $0 shell -s sudo -E bash -c "$cmd"
+            echo "++ install Bat"
+            $0 shell -s sudo -E apt install -y bat
+            $0 shell -s sudo -E ln -f /usr/bin/batcat /usr/bin/bat
+            cmd="export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
+            cmd="$cmd mkdir -p \$BAT_CONFIG_DIR/themes; cp $basedir/bat.tmTheme \$BAT_CONFIG_DIR/themes/;"
+            cmd="$cmd bat cache --build"
+            $0 shell -s sudo -E bash -c "$cmd"
 
-        echo "++ install Node.js"
-        $0 shell -s sudo -E bash -c "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -"
-        $0 shell -s sudo -E apt install -y nodejs
-        $0 shell -s sudo -E apt install -y binutils gcc g++ make
+            echo "++ install Node.js"
+            $0 shell -s sudo -E bash -c "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -"
+            $0 shell -s sudo -E apt install -y nodejs
+            $0 shell -s sudo -E apt install -y binutils gcc g++ make
 
-        echo "++ install Claude Code"
-        $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; curl -kfsSL https://claude.ai/install.sh | bash"
+            echo "++ install Claude Code"
+            $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; curl -kfsSL https://claude.ai/install.sh | bash"
 
-        echo "++ install ANSI-Recolor"
-        $0 shell -s sudo -E npm install -y -g ansi-recolor
+            echo "++ install ANSI-Recolor"
+            $0 shell -s sudo -E npm install -y -g ansi-recolor
+        else
+            echo "++ install Claude Code (on host)"
+            (PATH="$PATH:$HOME/.local/bin"; curl -kfsSL https://claude.ai/install.sh | bash)
+        fi
         ;;
 
     update )
@@ -104,34 +117,33 @@ case "$cmd" in
             fatal "cannot execute \"install\" command from within Capsula environment"
         fi
 
-        echo "++ update Debian GNU/Linux operating system"
-        $0 shell -s sudo apt update
-        $0 shell -s sudo apt upgrade -y
+        #   dispatch according to host/container mode
+        if [[ $host == no ]]; then
+            echo "++ update Debian GNU/Linux operating system"
+            $0 shell -s sudo apt update
+            $0 shell -s sudo apt upgrade -y
 
-        echo "++ update Bat"
-        cmd="export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
-        cmd="$cmd mkdir -p \$BAT_CONFIG_DIR/themes; cp $basedir/bat.tmTheme \$BAT_CONFIG_DIR/themes/;"
-        cmd="$cmd bat cache --build"
-        $0 shell -s sudo -E bash -c "$cmd"
+            echo "++ update Bat"
+            cmd="export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
+            cmd="$cmd mkdir -p \$BAT_CONFIG_DIR/themes; cp $basedir/bat.tmTheme \$BAT_CONFIG_DIR/themes/;"
+            cmd="$cmd bat cache --build"
+            $0 shell -s sudo -E bash -c "$cmd"
 
-        echo "++ update Claude Code"
-        $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; claude update"
+            echo "++ update Claude Code"
+            $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; $HOME/.local/bin/claude update"
 
-        echo "++ update ANSI-Recolor"
-        $0 shell -s sudo -E npm install -y -g ansi-recolor
+            echo "++ update ANSI-Recolor"
+            $0 shell -s sudo -E npm install -y -g ansi-recolor
+        else
+            echo "++ update Claude Code (on host)"
+            (PATH="$PATH:$HOME/.local/bin"; $HOME/.local/bin/claude update)
+        fi
         ;;
 
     session )
         #   sanity check environment
         if [[ $ENVIRONMENT == "capsula" ]]; then
             fatal "cannot execute \"install\" command from within Capsula environment"
-        fi
-
-        #   support special "-h" (host) option
-        host=no
-        if [[ $# -ge 1 && $1 == "-h" ]]; then
-            shift
-            host=yes
         fi
 
         #   determine session name
@@ -209,7 +221,6 @@ case "$cmd" in
             .cache!
             .claude!
             .claude.json!
-            .tweakcc!
         )
         dotfile_opts=(-m '!')
         for dotfile in "${dotfiles[@]}"; do
