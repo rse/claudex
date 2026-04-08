@@ -129,6 +129,12 @@ case "$cmd" in
 
             info "install ANSI-Recolor"
             $0 shell -s sudo -E npm install -y -g ansi-recolor
+
+            info "install TypeScript LS"
+            $0 shell -s sudo -E npm install -y -g typescript-language-server
+
+            info "install CCUsage"
+            $0 shell -s sudo -E npm install -y -g ccusage
         else
             info "install Claude Code (on host)"
             (PATH="$PATH:$HOME/.local/bin"; curl -kfsSL https://claude.ai/install.sh | bash)
@@ -158,6 +164,12 @@ case "$cmd" in
 
             info "update ANSI-Recolor"
             $0 shell -s sudo -E npm install -y -g ansi-recolor
+
+            info "update TypeScript LS"
+            $0 shell -s sudo -E npm install -y -g typescript-language-server
+
+            info "update CCUsage"
+            $0 shell -s sudo -E npm install -y -g ccusage
         else
             info "update Claude Code (on host)"
             (PATH="$PATH:$HOME/.local/bin"; $HOME/.local/bin/claude update)
