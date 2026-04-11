@@ -135,6 +135,9 @@ case "$cmd" in
 
             info "install CCUsage"
             $0 shell -s sudo -E npm install -y -g ccusage
+
+            info "install Claude wrapper"
+            $0 shell -s sudo install -c -m 755 $basedir/claude /usr/bin/claude
         else
             info "install Claude Code (on host)"
             (PATH="$PATH:$HOME/.local/bin"; curl -kfsSL https://claude.ai/install.sh | bash)
@@ -170,6 +173,9 @@ case "$cmd" in
 
             info "update CCUsage"
             $0 shell -s sudo -E npm install -y -g ccusage
+
+            info "update Claude wrapper"
+            $0 shell -s sudo install -c -m 755 $basedir/claude /usr/bin/claude
         else
             info "update Claude Code (on host)"
             (PATH="$PATH:$HOME/.local/bin"; $HOME/.local/bin/claude update)
@@ -308,7 +314,7 @@ case "$cmd" in
             -m \
             -n claude \
             -t $HOME/claude-trace.txt \
-            claude \
+            $HOME/.local/bin/claude \
                 --settings "$(sed <$basedir/claude-settings.json -e "s;@BASEDIR@;$basedir;g")" \
                 ${1+"$@"}
         ;;
