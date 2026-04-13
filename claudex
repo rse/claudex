@@ -102,6 +102,10 @@ case "$cmd" in
             fatal "cannot execute \"install\" command from within Capsula environment"
         fi
 
+        #   ensure we are not running from the home directory
+        #   in order to not read-write mount its ~/.local/!
+        cd $basedir || fatal "cannot switch to base directory"
+
         #   dispatch according to host/container mode
         if [[ $host == no ]]; then
             info "update Debian GNU/Linux operating system"
@@ -125,7 +129,9 @@ case "$cmd" in
             $0 shell -s sudo -E apt install -qq -y binutils gcc g++ make
 
             info "install Claude Code"
-            $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; curl -kfsSL https://claude.ai/install.sh | bash"
+            $0 shell bash -c "rm -f \$HOME/.local/bin/claude"
+            $0 shell bash -c "rm -f \$HOME/.local/share/claude/versions/*"
+            $0 shell bash -c "PATH=\"$HOME/.local/bin:\$PATH\"; curl -kfsSL https://claude.ai/install.sh | bash"
 
             info "install ANSI-Recolor"
             $0 shell -s sudo -E npm install -y -g ansi-recolor
@@ -140,7 +146,9 @@ case "$cmd" in
             $0 shell -s sudo install -c -m 755 $basedir/claude /usr/bin/claude
         else
             info "install Claude Code (on host)"
-            (PATH="$PATH:$HOME/.local/bin"; curl -kfsSL https://claude.ai/install.sh | bash)
+            rm -f $HOME/.local/bin/claude
+            rm -f $HOME/.local/share/claude/versions/*
+            (PATH="$HOME/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash)
         fi
         ;;
 
@@ -149,6 +157,10 @@ case "$cmd" in
         if [[ $ENVIRONMENT == "capsula" ]]; then
             fatal "cannot execute \"install\" command from within Capsula environment"
         fi
+
+        #   ensure we are not running from the home directory
+        #   in order to not read-write mount its ~/.local/!
+        cd $basedir || fatal "cannot switch to base directory"
 
         #   dispatch according to host/container mode
         if [[ $host == no ]]; then
@@ -163,7 +175,7 @@ case "$cmd" in
             $0 shell -s sudo -E bash -c "$cmd"
 
             info "update Claude Code"
-            $0 shell bash -c "PATH=\"\$PATH:$HOME/.local/bin\"; $HOME/.local/bin/claude update"
+            $0 shell bash -c "PATH=\"$HOME/.local/bin:\$PATH\"; $HOME/.local/bin/claude update"
 
             info "update ANSI-Recolor"
             $0 shell -s sudo -E npm install -y -g ansi-recolor
@@ -178,7 +190,7 @@ case "$cmd" in
             $0 shell -s sudo install -c -m 755 $basedir/claude /usr/bin/claude
         else
             info "update Claude Code (on host)"
-            (PATH="$PATH:$HOME/.local/bin"; $HOME/.local/bin/claude update)
+            (PATH="$HOME/.local/bin:$PATH"; $HOME/.local/bin/claude update)
         fi
         ;;
 
