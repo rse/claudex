@@ -349,7 +349,7 @@ case "$cmd" in
             -c $basedir/ansi-recolor.conf \
             -m \
             -n claude \
-            -t $HOME/claude-trace.txt \
+            -t $HOME/ansi-recolor.txt \
             $HOME/.local/bin/claude \
                 --settings "$(sed <$basedir/claude-settings.json -e "s;@BASEDIR@;$basedir;g")" \
                 ${1+"$@"}
@@ -387,20 +387,32 @@ case "$cmd" in
                 exec bash $basedir/sc.bash ${1+"$@"}
                 ;;
             lf )
+                ensureTool ansi-recolor
                 ensureTool lf
                 ensureTool vim
-                exec lf -config $basedir/lf.conf ${1+"$@"}
+                exec ansi-recolor \
+                    -c $basedir/ansi-recolor.conf \
+                    -m \
+                    -n lf \
+                    -t $HOME/ansi-recolor.txt \
+                    lf -config $basedir/lf.conf ${1+"$@"}
                 ;;
             bash )
                 ensureTool bash
                 exec bash -l ${1+"$@"}
                 ;;
             lazygit )
+                ensureTool ansi-recolor
                 ensureTool git
                 ensureTool lazygit
                 ensureTool vim
                 export TERM=xterm-color
-                exec lazygit -ucf $basedir/lazygit.yaml ${1+"$@"}
+                exec ansi-recolor \
+                    -c $basedir/ansi-recolor.conf \
+                    -m \
+                    -n lazygit \
+                    -t $HOME/ansi-recolor.txt \
+                    lazygit -ucf $basedir/lazygit.yaml ${1+"$@"}
                 ;;
         esac
         ;;
