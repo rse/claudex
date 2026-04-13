@@ -86,6 +86,11 @@ Usage
 $ claudex session
 ```
 
+See Also
+--------
+
+- [Agentic Software Engineering (ASE)](https://github.com/rse/ase)
+
 License
 -------
 
