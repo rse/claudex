@@ -197,7 +197,7 @@ case "$cmd" in
     session )
         #   sanity check environment
         if [[ $ENVIRONMENT == "capsula" ]]; then
-            fatal "cannot execute \"install\" command from within Capsula environment"
+            fatal "cannot execute \"session\" command from within Capsula environment"
         fi
 
         #   determine session name
@@ -231,6 +231,30 @@ case "$cmd" in
         else
             #   enter/start plain tmux
             exec $0 util tmux new-session -A -s "$session" -n "claude" "$0 claude"
+        fi
+        ;;
+
+    naked )
+        #   sanity check environment
+        if [[ $ENVIRONMENT == "capsula" ]]; then
+            fatal "cannot execute \"naked\" command from within Capsula environment"
+        fi
+
+        #   dispatch according to environment
+        if [[ $host == no ]]; then
+            #   enter/start container
+            container="capsula-$USER-debian-claude-$session"
+            if docker inspect $container >/dev/null 2>&1; then
+                #   enter already running container and run claude
+                exec docker exec -i -t "$container" \
+                    bash -c "TERM=$TERM HOME=$HOME sudo -E -u $USER $0 claude $@"
+            else
+                #   start a new container and run claude
+                exec $0 shell -C $container $0 claude ${1+"$@"}
+            fi
+        else
+            #   enter/start plain claude
+            exec $0 claude ${1+"$@"}
         fi
         ;;
 

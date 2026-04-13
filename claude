@@ -2,9 +2,14 @@
 if [ ".$CLAUDEX" != . ]; then
     PATH="$CLAUDEX:$PATH"
 fi
+host=""
+if [ $# -ge 1 ] && [ ".$1" = ".-h" ]; then
+    shift
+    host="-h"
+fi
 if [ ".$1" = .session ]; then
     shift
-    exec claudex session ${1+"$@"}
+    exec claudex $host session ${1+"$@"}
 else
-    exec claudex claude ${1+"$@"}
+    exec claudex $host naked ${1+"$@"}
 fi
