@@ -1,5 +1,5 @@
 
-ClaudeX
+claudeX
 =======
 
 This is *Dr. Ralf S. Engelschall* (RSE)'s opinionated [Claude Code](https://code.claude.com)
@@ -48,7 +48,7 @@ Claude Code command:
 Impressions
 -----------
 
-The following is a main view of the macOS Terminal with a ClaudeX
+The following is a main view of the macOS Terminal with a **claudeX**
 session running. Three Claude Code instances are running in separate
 panes of the screen.
 
