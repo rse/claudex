@@ -96,6 +96,11 @@ ensureTool () {
 #   dispatch according to command
 cmd="$1"; shift
 case "$cmd" in
+    version )
+        VERSION=$(cat $basedir/VERSION.txt)
+        echo "claudeX $VERSION"
+        ;;
+
     install )
         #   sanity check environment
         if [[ $ENVIRONMENT == "capsula" ]]; then
