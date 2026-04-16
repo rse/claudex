@@ -336,6 +336,7 @@ case "$cmd" in
             "${dotfile_opts[@]}" \
             "${null_opts[@]}" \
             -p '!' \
+            -e "CLAUDE_MODEL=${CLAUDE_MODEL-""}" \
             -e "CLAUDEX=$basedir" \
             -b "$basedir" \
             -b "/Users/rse/Work/ase" \
@@ -350,6 +351,47 @@ case "$cmd" in
         ensureTool claude
         ensureTool node
         ensureTool npm
+        if [[ $CLAUDE_MODEL =~ ^ollama: ]]; then
+            #   parse ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]
+            remainder="${CLAUDE_MODEL#ollama:}"
+            host="localhost:11434"
+            if [[ $remainder == //* ]]; then
+                remainder="${remainder#//}"
+                host="${remainder%%/*}"
+                remainder="${remainder#*/}"
+            else
+                remainder="${remainder#/}"
+            fi
+            model="${remainder%%\?*}"
+            context="200k"
+            capabilities=""
+            if [[ $remainder == *"?"* ]]; then
+                query="${remainder#*\?}"
+                IFS="," read -ra pairs <<< "$query"
+                for pair in "${pairs[@]}"; do
+                    key="${pair%%=*}"
+                    val="${pair#*=}"
+                    case "$key" in
+                        context )      context="$val"      ;;
+                        capabilities ) capabilities="$val" ;;
+                    esac
+                done
+            fi
+
+            #   override Claude Code configuration
+            export "ANTHROPIC_BASE_URL=http://$host"
+            export "ANTHROPIC_API_KEY="
+            export "ANTHROPIC_AUTH_TOKEN=ollama"
+            export "CLAUDE_CODE_ATTRIBUTION_HEADER=0"
+            export "ANTHROPIC_DEFAULT_OPUS_MODEL=$model"
+            export "ANTHROPIC_DEFAULT_SONNET_MODEL=$model"
+            export "ANTHROPIC_DEFAULT_HAIKU_MODEL=$model"
+            export "CLAUDE_CODE_SUBAGENT_MODEL=$model"
+            export "CLAUDE_CODE_AUTO_COMPACT_WINDOW=$context"
+            export "ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES=$capabilities"
+            export "DISABLE_LOGIN_COMMAND=1"
+            export "DISABLE_LOGOUT_COMMAND=1"
+        fi
         exec ansi-recolor \
             -c $basedir/ansi-recolor.conf \
             -m \
