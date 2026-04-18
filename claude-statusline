@@ -19,8 +19,6 @@ process.stdin.on("end", () => {
     const cost  = data.cost?.total_cost_usd ?? 0
     const ms    = data.cost?.total_duration_ms ?? 0
 
-    /* if (ms < 20000) return */
-
     const DIM    = "\x1b[2m"
     const BOLD   = "\x1b[1m"
     const BLUE   = "\x1b[34m"
