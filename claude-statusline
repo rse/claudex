@@ -3,8 +3,9 @@
 **  claude-statusline
 */
 
-const fs   = require("fs")
-const path = require("path")
+const fs            = require("fs")
+const path          = require("path")
+const child_process = require("child_process")
 
 let input = ""
 process.stdin.on("data", (chunk) => {
@@ -13,11 +14,25 @@ process.stdin.on("data", (chunk) => {
 process.stdin.on("end", () => {
     const data  = JSON.parse(input)
 
-    const dir   = path.basename(data.workspace.current_dir)
-    const model = data.model.display_name
-    const pct   = Math.floor(data.context_window?.used_percentage ?? 0)
-    const cost  = data.cost?.total_cost_usd ?? 0
-    const ms    = data.cost?.total_duration_ms ?? 0
+    const dir       = path.basename(data.workspace.current_dir)
+    const model     = data.model.display_name
+    const pct       = Math.floor(data.context_window?.used_percentage ?? 0)
+    const cost      = data.cost?.total_cost_usd ?? 0
+    const ms        = data.cost?.total_duration_ms ?? 0
+    const effort    = data.effort?.level ?? "unknown"
+    const thinking  = (data.thinking?.enabled ?? false) === true ? "thinking" : "no thinking"
+    const sessionId = data.session_id ?? "unknown"
+
+    let taskId = process.env.ASE_TASK_ID ?? ""
+    try {
+        const out = child_process.execSync(
+            `ase config --scope="session:${sessionId}" get task.id`,
+            { stdio: [ "ignore", "pipe", "ignore" ] }).toString().trim()
+        if (out !== "")
+            taskId = out
+    }
+    catch (_e) {
+    }
 
     const DIM    = "\x1b[2m"
     const BOLD   = "\x1b[1m"
@@ -33,7 +48,12 @@ process.stdin.on("end", () => {
 
     let output = ""
     output += `${BLUE}⧉ ${BOLD}${dir}${RESET} `
+    if (taskId !== "")
+        output += `${RED}☑ ${BOLD}${taskId}${RESET} `
+    output += `⏻ ${sessionId}\n`
     output += `${RESET}⚙ ${RESET}${model}${RESET} `
+    output += `⚒ ${effort} effort `
+    output += `※ ${thinking} `
     output += `${barColor}◔ ${bar} ${pct}%${RESET}`
 
     console.log(output)
