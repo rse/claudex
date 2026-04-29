@@ -130,7 +130,7 @@ const main = async (): Promise<void> => {
     /*  dispatch according to command  */
     switch (cmd) {
         case "version": {
-            const ver = fs.readFileSync(path.join(basedir, "VERSION.txt"), "utf8").trim()
+            const ver = JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf8")).version
             process.stdout.write(`claudeX ${ver}\n`)
             break
         }
