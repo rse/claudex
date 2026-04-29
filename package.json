@@ -1,0 +1,20 @@
+{
+    "private":         true,
+    "name":            "claudex",
+    "version":         "0.9.2",
+    "description":     "Claude Code eXtended - opinionated Claude Code environment",
+    "type":            "module",
+    "license":         "MIT",
+    "author":          "Dr. Ralf S. Engelschall <rse@engelschall.com>",
+    "dependencies": {
+        "execa":       "9.6.1",
+        "zx":          "8.8.5"
+    },
+    "devDependencies": {
+        "typescript":  "6.0.3",
+        "@types/node": "25.6.0"
+    },
+    "scripts": {
+        "build":       "tsc"
+    }
+}
