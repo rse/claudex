@@ -17,7 +17,6 @@
         "rootDir":                 "."
     },
     "files": [
-        "claudex.ts",
-        "claude-statusline.ts"
+        "claudex.ts"
     ]
 }
