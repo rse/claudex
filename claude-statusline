@@ -34,6 +34,17 @@ process.stdin.on("end", () => {
     catch (_e) {
     }
 
+    let width = 0
+    try {
+        width = parseInt(child_process.execSync("tput cols </dev/tty", {
+            stdio: [ "ignore", "pipe", "ignore" ],
+            shell: "/bin/sh"
+        }).toString().trim()) ?? 0
+    }
+    catch (_e) {
+    }
+    const narrow = width > 0 && width < 80
+
     const RESET   = "\x1b[0m"
     const REVERSE = "\x1b[2m"
     const DIM     = "\x1b[2m"
@@ -53,9 +64,13 @@ process.stdin.on("end", () => {
     output += `${RED}⚑ project: ${BOLD}${dir}${RESET} `
     if (taskId !== "")
         output += `${BLACK}◉ task: ${BOLD}${taskId}${RESET} `
+    if (narrow)
+        output += "\n"
     output += `⏻ session: ${BOLD}${sessionId}${RESET}\n`
     output += `⚙ model: ${BOLD}${model}${RESET} `
     output += `⚒ effort: ${BOLD}${effort}${RESET} `
+    if (narrow)
+        output += "\n"
     output += `⚛ thinking: ${BOLD}${thinking}${RESET} `
     output += `${barColor}◔ context: ${bar} ${pct}%${RESET}`
 
