@@ -419,6 +419,16 @@ const main = async () => {
                 env.DISABLE_LOGIN_COMMAND = "1";
                 env.DISABLE_LOGOUT_COMMAND = "1";
             }
+            /*  override ASE configuration (for its diagram rendering)  */
+            if (process.env.ASE_TERM_WIDTH === undefined) {
+                let width = 0;
+                if (process.stdout.isTTY) {
+                    const cols = process.stdout.columns;
+                    if (typeof cols === "number" && cols > 0)
+                        width = cols;
+                }
+                process.env.ASE_TERM_WIDTH = `${width}`;
+            }
             const settingsRaw = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8");
             const settings = settingsRaw.replace(/@BASEDIR@/g, basedir);
             await execInherit("ansi-recolor", [
