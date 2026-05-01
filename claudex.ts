@@ -108,11 +108,11 @@ if (argv.length === 0) {
     process.exit(1)
 }
 
-/*  support special "-h" (host) option  */
-let host = false
-if (argv.length >= 1 && argv[0] === "-h") {
+/*  support special "-s" (sandbox) option  */
+let sandbox = false
+if (argv.length >= 1 && argv[0] === "-s") {
     argv = argv.slice(1)
-    host = true
+    sandbox = true
 }
 
 /*  determine command  */
@@ -150,7 +150,7 @@ const main = async (): Promise<void> => {
             }
 
             /*  dispatch according to host/container mode  */
-            if (!host) {
+            if (sandbox) {
                 info("update Debian GNU/Linux operating system")
                 await self("shell", "-s", "sudo", "-E", "apt", "update", "-qq")
                 await self("shell", "-s", "sudo", "-E", "apt", "upgrade", "-qq", "-y")
@@ -216,7 +216,7 @@ const main = async (): Promise<void> => {
             }
 
             /*  dispatch according to host/container mode  */
-            if (!host) {
+            if (sandbox) {
                 info("update Debian GNU/Linux operating system")
                 await self("shell", "-s", "sudo", "apt", "update", "-qq")
                 await self("shell", "-s", "sudo", "apt", "upgrade", "-qq", "-y")
@@ -272,7 +272,7 @@ const main = async (): Promise<void> => {
             }
 
             /*  dispatch according to environment  */
-            if (!host) {
+            if (sandbox) {
                 /*  enter/start container  */
                 const container = `capsula-${USER}-debian-claude-${session}`
                 const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
@@ -303,7 +303,7 @@ const main = async (): Promise<void> => {
                 fatal("cannot execute \"naked\" command from within Capsula environment")
 
             /*  dispatch according to environment  */
-            if (!host) {
+            if (sandbox) {
                 const session = "default"
                 const container = `capsula-${USER}-debian-claude-${session}`
                 const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
