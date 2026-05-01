@@ -472,6 +472,21 @@ const main = async (): Promise<void> => {
                 }
                 process.env.ASE_TERM_WIDTH = `${width}`
             }
+            if (process.env.ASE_TERM_COLORS === undefined) {
+                let colorMode = "none"
+                try {
+                    const { stdout } = execaSync("tput", [ "colors" ], { reject: false })
+                    const n = parseInt(stdout.trim(), 10)
+                    if (!Number.isNaN(n) && n >= 256)
+                        colorMode = "ansi256"
+                    else if (!Number.isNaN(n) && n >= 16)
+                        colorMode = "ansi16"
+                }
+                catch (_e) {
+                    /*  ignore  */
+                }
+                process.env.ASE_TERM_COLORS = `${colorMode}`
+            }
 
             const settingsRaw = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8")
             const settings = settingsRaw.replace(/@BASEDIR@/g, basedir)
