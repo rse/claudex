@@ -544,6 +544,15 @@ const main = async () => {
             output += `${barColor}◔ context: ${bar} ${pct}%${RESET}\n`;
             /*  send output  */
             process.stdout.write(output);
+            /*  publish task id to the calling tmux pane as a per-pane user
+                option, so popup bindings can pick it up via #{@ase_task_id}  */
+            if (process.env.TMUX !== undefined &&
+                process.env.TMUX !== "" &&
+                process.env.TMUX_PANE !== undefined &&
+                process.env.TMUX_PANE !== "") {
+                const tid = taskId !== "" ? taskId : "default";
+                execaSync("tmux", ["set-option", "-p", "-t", process.env.TMUX_PANE, "@ase_task_id", tid], { stdio: "ignore", reject: false });
+            }
             break;
         }
         case "util": {
@@ -565,6 +574,8 @@ const main = async () => {
                         "-T", "─◀#[reverse] ⧉ Search Content (sc) #[noreverse]▶", `${selfPath} util sc`, ";",
                         "bind-key", "f", "display-popup", "-E", "-w", "95%", "-h", "95%",
                         "-T", "─◀#[reverse] ⧉ File Browser (lf) #[noreverse]▶", `${selfPath} util lf`, ";",
+                        "bind-key", "q", "display-popup", "-E", "-w", "95%", "-h", "95%",
+                        "-T", "─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶", `${selfPath} util ase-task-edit`, ";",
                         ...argv
                     ]);
                     break;
@@ -600,6 +611,19 @@ const main = async () => {
                 case "bash": {
                     ensureTool("bash");
                     await execInherit("bash", ["-l", ...argv]);
+                    break;
+                }
+                case "ase-task-edit": {
+                    ensureTool("ase");
+                    let tid = "";
+                    const r1 = execaSync("tmux", ["display-message", "-p", "#{@ase_task_id}"], { reject: false });
+                    tid = (r1.stdout ?? "").trim();
+                    if (tid !== "")
+                        await execInherit("ase", ["task", "edit", tid]);
+                    else {
+                        process.stderr.write("no ASE task id known for this pane yet\n");
+                        await new Promise((resolve) => setTimeout(resolve, 2000));
+                    }
                     break;
                 }
                 case "lazygit": {
