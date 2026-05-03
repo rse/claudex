@@ -535,7 +535,7 @@ const main = async (): Promise<void> => {
             /*  optionally determine ASE task id  */
             let taskId = process.env.ASE_TASK_ID ?? ""
             try {
-                const r = execaSync("ase", [ "config", `--scope=session:${sessionId}`, "get", "task.id" ],
+                const r = execaSync("ase", [ "config", `--scope=session:${sessionId}`, "get", "agent.task" ],
                     { stdio: [ "ignore", "pipe", "ignore" ], reject: false })
                 const out = r.stdout.trim()
                 if (out !== "")
@@ -545,9 +545,9 @@ const main = async (): Promise<void> => {
             }
 
             /*  optionally determine ASE persona style  */
-            let persona = ""
+            let persona = process.env.ASE_PERSONA_STYLE ?? ""
             try {
-                const r = execaSync("ase", [ "config", `--scope=session:${sessionId}`, "get", "agent.persona.style" ],
+                const r = execaSync("ase", [ "config", `--scope=session:${sessionId}`, "get", "agent.persona" ],
                     { stdio: [ "ignore", "pipe", "ignore" ], reject: false })
                 const out = r.stdout.trim()
                 if (out !== "")
