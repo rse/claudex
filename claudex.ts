@@ -567,7 +567,6 @@ const main = async (): Promise<void> => {
             }
             catch (_e) {
             }
-            const narrow = width > 0 && width < 80
 
             /*  configure ANSI sequences  */
             const RESET   = "\x1b[0m"
@@ -586,17 +585,31 @@ const main = async (): Promise<void> => {
             /*  generate output  */
             let output = ""
             output += `${BLUE}※ user: ${BOLD}${process.env.USER ?? process.env.LOGNAME ?? "unknown"}${RESET} `
-            output += `${RED}⚑ project: ${BOLD}${dir}${RESET} `
-            if (narrow)
+            if (width > 0 && width < 30)
                 output += "\n"
-            if (taskId !== "")
+            output += `${RED}⚑ project: ${BOLD}${dir}${RESET} `
+            if (width > 0 && width < 60)
+                output += "\n"
+            if (taskId !== "") {
                 output += `${BLACK}◉ task: ${BOLD}${taskId}${RESET} `
+                if (width > 0 && width < 90)
+                    output += "\n"
+            }
             output += `⏻ session: ${BOLD}${sessionId}${RESET}\n`
+
             output += `⚙ model: ${BOLD}${model}${RESET} `
+            if (width > 0 && width < 30)
+                output += "\n"
             output += `⚒ effort: ${BOLD}${effort}${RESET} `
+            if (width > 0 && width < 60)
+                output += "\n"
             output += `⚛ thinking: ${BOLD}${thinking}${RESET}\n`
-            if (persona !== "")
+
+            if (persona !== "") {
                 output += `☯ persona: ${BOLD}${persona}${RESET} `
+                if (width > 0 && width < 30)
+                    output += "\n"
+            }
             output += `${barColor}◔ context: ${bar} ${pct}%${RESET}\n`
 
             /*  send output  */
