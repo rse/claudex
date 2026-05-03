@@ -8,7 +8,7 @@
     },
     "statusLine": {
         "type": "command",
-        "command": "@BASEDIR@/claudex statusline",
+        "command": "ase statusline",
         "padding": 0
     },
     "verbose": false,

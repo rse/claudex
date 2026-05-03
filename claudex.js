@@ -90,7 +90,6 @@ if (argv.length === 0) {
     process.stderr.write("claudex: USAGE: claudex session\n");
     process.stderr.write("claudex: USAGE: claudex shell [...]\n");
     process.stderr.write("claudex: USAGE: claudex claude [...]\n");
-    process.stderr.write("claudex: USAGE: claudex statusline\n");
     process.exit(1);
 }
 /*  support special "-s" (sandbox) option  */
@@ -455,104 +454,6 @@ const main = async () => {
                 "--settings", settings,
                 ...argv
             ], { env });
-            break;
-        }
-        case "statusline": {
-            /*  read all of stdin  */
-            const input = await new Promise((resolve) => {
-                let buf = "";
-                process.stdin.on("data", (chunk) => { buf += chunk; });
-                process.stdin.on("end", () => { resolve(buf); });
-            });
-            /*  parse JSON data  */
-            const data = JSON.parse(input);
-            /*  fetch information from data  */
-            const dir = path.basename(data.workspace?.current_dir ?? "");
-            const model = data.model?.display_name ?? "";
-            const pct = Math.floor(data.context_window?.used_percentage ?? 0);
-            const effort = data.effort?.level ?? "unknown";
-            const thinking = (data.thinking?.enabled ?? false) === true ? "yes" : "no";
-            const sessionId = data.session_id ?? "unknown";
-            /*  optionally determine ASE task id  */
-            let taskId = process.env.ASE_TASK_ID ?? "";
-            try {
-                const r = execaSync("ase", ["config", `--scope=session:${sessionId}`, "get", "agent.task"], { stdio: ["ignore", "pipe", "ignore"], reject: false });
-                const out = r.stdout.trim();
-                if (out !== "")
-                    taskId = out;
-            }
-            catch (_e) {
-            }
-            /*  optionally determine ASE persona style  */
-            let persona = process.env.ASE_PERSONA_STYLE ?? "";
-            try {
-                const r = execaSync("ase", ["config", `--scope=session:${sessionId}`, "get", "agent.persona"], { stdio: ["ignore", "pipe", "ignore"], reject: false });
-                const out = r.stdout.trim();
-                if (out !== "")
-                    persona = out;
-            }
-            catch (_e) {
-            }
-            /*  optionally determine terminal width  */
-            let width = 0;
-            try {
-                const tty = fs.openSync("/dev/tty", "r");
-                const r = execaSync("tput", ["cols"], { stdio: [tty, "pipe", "ignore"], reject: false });
-                fs.closeSync(tty);
-                width = parseInt((r.stdout ?? "").trim()) || 0;
-            }
-            catch (_e) {
-            }
-            /*  configure ANSI sequences  */
-            const RESET = "\x1b[0m";
-            const BOLD = "\x1b[1m";
-            const BLACK = "\x1b[30m";
-            const BLUE = "\x1b[34m";
-            const YELLOW = "\x1b[33m";
-            const RED = "\x1b[31m";
-            /*  determine context bar information  */
-            const barSize = 20;
-            const barColor = pct >= 80 ? RED : pct >= 60 ? YELLOW : pct >= 40 ? BLUE : RESET;
-            const filled = Math.round(pct / 100 * barSize);
-            const bar = "█".repeat(filled) + "░".repeat(barSize - filled);
-            /*  generate output  */
-            let output = "";
-            output += `${BLUE}※ user: ${BOLD}${process.env.USER ?? process.env.LOGNAME ?? "unknown"}${RESET} `;
-            if (width > 0 && width < 30)
-                output += "\n";
-            output += `${RED}⚑ project: ${BOLD}${dir}${RESET} `;
-            if (width > 0 && width < 60)
-                output += "\n";
-            if (taskId !== "") {
-                output += `${BLACK}◉ task: ${BOLD}${taskId}${RESET} `;
-                if (width > 0 && width < 90)
-                    output += "\n";
-            }
-            output += `⏻ session: ${BOLD}${sessionId}${RESET}\n`;
-            output += `⚙ model: ${BOLD}${model}${RESET} `;
-            if (width > 0 && width < 30)
-                output += "\n";
-            output += `⚒ effort: ${BOLD}${effort}${RESET} `;
-            if (width > 0 && width < 60)
-                output += "\n";
-            output += `⚛ thinking: ${BOLD}${thinking}${RESET}\n`;
-            if (persona !== "") {
-                output += `☯ persona: ${BOLD}${persona}${RESET} `;
-                if (width > 0 && width < 30)
-                    output += "\n";
-            }
-            output += `${barColor}◔ context: ${bar} ${pct}%${RESET}\n`;
-            /*  send output  */
-            process.stdout.write(output);
-            /*  publish task id to the calling tmux pane as a per-pane user
-                option, so popup bindings can pick it up via #{@ase_task_id}  */
-            if (process.env.TMUX !== undefined &&
-                process.env.TMUX !== "" &&
-                process.env.TMUX_PANE !== undefined &&
-                process.env.TMUX_PANE !== "") {
-                const tid = taskId !== "" ? taskId : "default";
-                execaSync("tmux", ["set-option", "-p", "-t", process.env.TMUX_PANE, "@ase_task_id", tid], { stdio: "ignore", reject: false });
-            }
             break;
         }
         case "util": {
