@@ -1,7 +1,7 @@
 {
     "private":         true,
     "name":            "claudex",
-    "version":         "0.9.7",
+    "version":         "0.9.8",
     "description":     "Claude Code eXtended - opinionated Claude Code environment",
     "type":            "module",
     "license":         "MIT",
