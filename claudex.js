@@ -483,6 +483,16 @@ const main = async () => {
             }
             catch (_e) {
             }
+            /*  optionally determine ASE persona style  */
+            let persona = "";
+            try {
+                const r = execaSync("ase", ["config", `--scope=session:${sessionId}`, "get", "agent.persona.style"], { stdio: ["ignore", "pipe", "ignore"], reject: false });
+                const out = r.stdout.trim();
+                if (out !== "")
+                    persona = out;
+            }
+            catch (_e) {
+            }
             /*  optionally determine terminal width  */
             let width = 0;
             try {
@@ -508,18 +518,18 @@ const main = async () => {
             const bar = "█".repeat(filled) + "░".repeat(barSize - filled);
             /*  generate output  */
             let output = "";
-            output += `${BLUE}※ user: ${BOLD}${process.env.USER ?? "unknown"}${RESET} `;
+            output += `${BLUE}※ user: ${BOLD}${process.env.USER ?? process.env.LOGNAME ?? "unknown"}${RESET} `;
             output += `${RED}⚑ project: ${BOLD}${dir}${RESET} `;
-            if (taskId !== "")
-                output += `${BLACK}◉ task: ${BOLD}${taskId}${RESET} `;
             if (narrow)
                 output += "\n";
+            if (taskId !== "")
+                output += `${BLACK}◉ task: ${BOLD}${taskId}${RESET} `;
             output += `⏻ session: ${BOLD}${sessionId}${RESET}\n`;
             output += `⚙ model: ${BOLD}${model}${RESET} `;
             output += `⚒ effort: ${BOLD}${effort}${RESET} `;
-            if (narrow)
-                output += "\n";
-            output += `⚛ thinking: ${BOLD}${thinking}${RESET} `;
+            output += `⚛ thinking: ${BOLD}${thinking}${RESET}\n`;
+            if (persona !== "")
+                output += `☯ persona: ${BOLD}${persona}${RESET} `;
             output += `${barColor}◔ context: ${bar} ${pct}%${RESET}\n`;
             /*  send output  */
             process.stdout.write(output);
