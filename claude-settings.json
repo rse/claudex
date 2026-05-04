@@ -8,7 +8,7 @@
     },
     "statusLine": {
         "type": "command",
-        "command": "ase statusline",
+        "command": "ase statusline -w 0 -m 2 '%u %p %T %s' '%m %e %t' '%P %c'",
         "padding": 0
     },
     "verbose": false,
