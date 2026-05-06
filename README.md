@@ -1,6 +1,6 @@
 
-claudeX -- Claude Code eXtended
-===============================
+claudeX &mdash; Claude Code eXtended
+====================================
 
 This is *Dr. Ralf S. Engelschall* (RSE)'s opinionated [Claude Code](https://code.claude.com)
 environment for macOS and Linux. It mainly provides a thin `claudex` (claude eXtended)
