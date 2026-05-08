@@ -64,9 +64,7 @@ Installation
 ------------
 
 ```sh
-$ git clone https://github.com/rse/claudex /path/to/somewhere
-$ ln -s /path/to/somewhere/claudex ~/bin/claudex
-$ npm install
+$ npm install -h @rse/claudex
 $ claudex install
 ```
 
