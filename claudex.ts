@@ -294,14 +294,17 @@ const main = async (): Promise<void> => {
                 })
 
                 info("install Claude Code")
-                if (process.platform !== "win32") {
-                    /*  remove obsolete versions  */
-                    try { fs.unlinkSync(path.join(HOME, ".local/bin/claude")) } catch (_e) {}
+                /*  helper: remove obsolete Claude Code versions  */
+                const removeObsoleteClaudeVersions = (binName: string): void => {
+                    try { fs.unlinkSync(path.join(HOME, ".local/bin", binName)) } catch (_e) {}
                     const versionsDir = path.join(HOME, ".local/share/claude/versions")
                     if (fs.existsSync(versionsDir)) {
                         for (const f of fs.readdirSync(versionsDir))
                             try { fs.unlinkSync(path.join(versionsDir, f)) } catch (_e) {}
                     }
+                }
+                if (process.platform !== "win32") {
+                    removeObsoleteClaudeVersions("claude")
 
                     /*  run installation script  */
                     ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
@@ -314,13 +317,7 @@ const main = async (): Promise<void> => {
                     if (!process.env.PSModulePath)
                         fatal("on Windows the \"install\" command has to be run from within a PowerShell session")
 
-                    /*  remove obsolete versions  */
-                    try { fs.unlinkSync(path.join(HOME, ".local/bin/claude.exe")) } catch (_e) {}
-                    const versionsDir = path.join(HOME, ".local/share/claude/versions")
-                    if (fs.existsSync(versionsDir)) {
-                        for (const f of fs.readdirSync(versionsDir))
-                            try { fs.unlinkSync(path.join(versionsDir, f)) } catch (_e) {}
-                    }
+                    removeObsoleteClaudeVersions("claude.exe")
 
                     /*  run installation script  */
                     ensureTool("powershell")
