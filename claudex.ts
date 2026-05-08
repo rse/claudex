@@ -13,7 +13,7 @@ import which                from "which"
 import chalk                from "chalk"
 
 /*  type for environment variable map  */
-type Env = Record<string, string>
+type Env = Record<string, string | undefined>
 
 /*  determine our base directory (handle absolute, relative, PATH, symlinks)  */
 const findBaseDir = (): string => {
@@ -332,7 +332,7 @@ const main = async (): Promise<void> => {
         case "update": {
             /*  sanity check environment  */
             if (ENVIRONMENT === "capsula")
-                fatal("cannot execute \"install\" command from within Capsula environment")
+                fatal("cannot execute \"update\" command from within Capsula environment")
 
             /*  ensure we are not running from the home directory
                 in order to not read-write mount its ~/.local/!  */
@@ -448,12 +448,15 @@ const main = async (): Promise<void> => {
             }
             else {
                 let dir = process.cwd()
-                while (dir !== "/") {
+                while (true) {
                     if (fs.existsSync(path.join(dir, "AGENTS.md")) || fs.existsSync(path.join(dir, "CLAUDE.md"))) {
                         session = path.basename(dir)
                         break
                     }
-                    dir = path.dirname(dir)
+                    const parent = path.dirname(dir)
+                    if (parent === dir)
+                        break
+                    dir = parent
                 }
             }
 
@@ -496,8 +499,8 @@ const main = async (): Promise<void> => {
                 const container = `capsula-${USER}-debian-claude-${session}`
                 const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
                 if (inspect.exitCode === 0) {
-                    /*  enter already running container and run claude  */
-                    const passthru = argv.map((a) => `"${a.replace(/"/g, "\\\"")}"`).join(" ")
+                    /*  enter already running container and run claude (single-quote shell-escape)  */
+                    const passthru = argv.map((a) => `'${a.replace(/'/g, "'\\''")}'`).join(" ")
                     await execInherit("docker", [
                         "exec", "-i", "-t", container,
                         "bash", "-c",
@@ -569,9 +572,10 @@ const main = async (): Promise<void> => {
                 const envFile = path.join(dir, ".env")
                 if (fs.existsSync(envFile) && fs.statSync(envFile).isFile())
                     nullOpts.push("-n", envFile)
-                if (dir === "/")
+                const parent = path.dirname(dir)
+                if (parent === dir)
                     break
-                dir = path.dirname(dir)
+                dir = parent
             }
 
             /*  execute  */
@@ -596,7 +600,7 @@ const main = async (): Promise<void> => {
             process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
             ensureTool("ansi-recolor")
             ensureTool("claude")
-            const env: Env = { ...process.env as Env }
+            const env: Env = { ...process.env }
             const claudeModel = process.env.CLAUDE_MODEL ?? ""
             if (/^ollama:/.test(claudeModel)) {
                 /*  parse ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]  */
@@ -730,7 +734,7 @@ const main = async (): Promise<void> => {
                     ensureTool("git")
                     ensureTool("lazygit")
                     ensureTool("vim", { optional: true })
-                    const env: Env = { ...process.env as Env, TERM: "xterm-color" }
+                    const env: Env = { ...process.env, TERM: "xterm-color" }
                     await execInherit("ansi-recolor", [
                         "-c", path.join(basedir, "ansi-recolor.conf"),
                         "-m",
