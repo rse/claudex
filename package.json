@@ -1,29 +1,32 @@
 {
-    "name":            "@rse/claudex",
-    "publishConfig":   { "access": "public" },
-    "version":         "0.9.12",
-    "description":     "Claude Code eXtended",
-    "type":            "module",
-    "keywords":        [ "claude", "code", "extension", "wrapper" ],
-    "homepage":        "http://github.com/rse/claudex",
-    "repository":      { "url": "git+https://github.com/rse/claudex.git", "type": "git" },
-    "bugs":            { "url": "http://github.com/rse/claudex/issues" },
-    "version":         "0.9.12",
-    "license":         "MIT",
+    "name":             "@rse/claudex",
+    "publishConfig":    { "access": "public" },
+    "version":          "0.9.12",
+    "description":      "Claude Code eXtended",
+    "type":             "module",
+    "keywords":         [ "claude", "code", "extension", "wrapper" ],
+    "homepage":         "http://github.com/rse/claudex",
+    "repository":       { "url": "git+https://github.com/rse/claudex.git", "type": "git" },
+    "bugs":             { "url": "http://github.com/rse/claudex/issues" },
+    "version":          "0.9.12",
+    "license":          "MIT",
     "author": {
-        "name":        "Dr. Ralf S. Engelschall",
-        "email":       "rse@engelschall.com",
-        "url":         "http://engelschall.com"
+        "name":         "Dr. Ralf S. Engelschall",
+        "email":        "rse@engelschall.com",
+        "url":          "http://engelschall.com"
     },
-    "bin":             { "claudex": "claudex.js" },
+    "bin":              { "claudex": "claudex.js" },
     "dependencies": {
-        "execa":       "9.6.1"
+        "which":        "7.0.0",
+        "execa":        "9.6.1",
+        "chalk":        "5.6.2"
     },
     "devDependencies": {
-        "typescript":  "6.0.3",
-        "@types/node": "25.6.2"
+        "typescript":   "6.0.3",
+        "@types/node":  "25.6.2",
+        "@types/which": "3.0.4"
     },
     "scripts": {
-        "build":       "tsc"
+        "build":        "tsc"
     }
 }

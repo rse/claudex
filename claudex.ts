@@ -9,6 +9,8 @@ import * as fs              from "node:fs"
 import * as path            from "node:path"
 import * as os              from "node:os"
 import { execa, execaSync } from "execa"
+import which                from "which"
+import chalk                from "chalk"
 
 /*  type for environment variable map  */
 type Env = Record<string, string>
@@ -36,40 +38,21 @@ const selfPathJS = process.argv[1] ?? path.join(basedir, "claudex.js")
 /*  command line arguments (after node and script path)  */
 let argv = process.argv.slice(2)
 
-/*  determine terminal colors  */
-let col_bd = ""
-let col_bl = ""
-let col_rd = ""
-let col_no = ""
-try {
-    const { stdout } = execaSync("tput", [ "colors" ], { reject: false })
-    const n = parseInt(stdout.trim(), 10)
-    if (!Number.isNaN(n) && n >= 8) {
-        col_bd = "\x1b[1m"
-        col_bl = "\x1b[34m"
-        col_rd = "\x1b[31m"
-        col_no = "\x1b[0m"
-    }
-}
-catch (_e) {
-    /*  ignore  */
-}
-
 /*  helper for displaying info messages  */
 const info = (msg: string): void => {
-    process.stderr.write(`${col_bl}claudex: ${col_bd}INFO:${col_no}${col_bl} ${msg}${col_no}\n`)
+    process.stderr.write(`${chalk.blue("claudex: ")}${chalk.blue.bold("INFO:")}${chalk.blue(` ${msg}`)}\n`)
 }
 
 /*  helper for raising a fatal error  */
 const fatal = (msg: string): never => {
-    process.stderr.write(`${col_rd}claudex: ${col_bd}ERROR:${col_no}${col_rd} ${msg}${col_no}\n`)
+    process.stderr.write(`${chalk.red("claudex: ")}${chalk.red.bold("ERROR:")}${chalk.red(` ${msg}`)}\n`)
     process.exit(1)
 }
 
 /*  helper to ensure a tool is available  */
 const ensureTool = (tool: string): void => {
-    const r = execaSync("sh", [ "-c", `command -v "${tool}"` ], { reject: false })
-    if (r.exitCode !== 0)
+    const r = which.sync(tool, { nothrow: true })
+    if (r === null)
         fatal(`required tool "${tool}" not found in $PATH`)
 }
 
