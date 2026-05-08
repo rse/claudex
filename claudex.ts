@@ -80,6 +80,24 @@ const execInherit = async (file: string, args: string[], opts: { env?: Env } = {
     process.exit(r.exitCode ?? 0)
 }
 
+/*  helper to execute a platform-specific command  */
+const executeCommand = (config: { [ platform: string ]: string[] | string }) => {
+    const platform = detectPlatform()
+    const os = platform.split(":")[0]
+    const command = config[platform] ?? config[`${os}:*`]
+    if (command === undefined)
+        return -1
+    const cmd = command instanceof Array ? command : command.split(/\s+/)
+    info(`execute: $ ${cmd.join(" ")}`)
+    const result = execaSync(cmd[0], cmd.slice(1), {
+        stdio:        "inherit",
+        env:          process.env,
+        reject:       false,
+        windowsHide:  false
+    })
+    return result.exitCode
+}
+
 /*  helper to ensure a tool is available  */
 const ensureTool = (tool: string | string[], options: {
     install?:  { [ platform: string ]: string[] | string },
@@ -91,21 +109,9 @@ const ensureTool = (tool: string | string[], options: {
         const r = which.sync(tool, { nothrow: true })
         if (r === null) {
             if (options.install) {
-                const platform = detectPlatform()
-                const os = platform.split(":")[0]
-                const command = options.install[platform] ?? options.install[`${os}:*`]
-                if (command !== undefined) {
-                    const cmd = command instanceof Array ? command : command.split(/\s+/)
-                    info(`running: $ ${cmd.join(" ")}`)
-                    const result = execaSync(cmd[0], cmd.slice(1), {
-                        stdio:        "inherit",
-                        env:          process.env,
-                        reject:       options.optional ? false : true,
-                        windowsHide:  false
-                    })
-                    if ((result.exitCode ?? 0) === 0)
-                        continue
-                }
+                const returnCode = executeCommand(options.install)
+                if (returnCode === 0)
+                    continue
             }
             if (options.optional)
                 continue
@@ -209,8 +215,9 @@ const main = async (): Promise<void> => {
                 await self("shell", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
             }
             else {
-                info("checking dependencies")
                 const platform = detectPlatform()
+
+                info("install Tmux")
                 ensureTool("tmux", {
                     hint: platform.match(/^windows:/) ?
                         "https://github.com/psmux/psmux" :
@@ -224,6 +231,8 @@ const main = async (): Promise<void> => {
                         "linux:apk":      "sudo apk add --no-interactive tmux"
                     }
                 })
+
+                info("install LazyGit")
                 ensureTool("lazygit", {
                     optional: true,
                     hint: "https://github.com/jesseduffield/lazygit/",
@@ -236,6 +245,8 @@ const main = async (): Promise<void> => {
                         "linux:apk":      "sudo apk add --no-interactive lazygit"
                     }
                 })
+
+                info("install Git")
                 ensureTool("git", {
                     optional: true,
                     hint: "https://git-scm.com",
@@ -248,6 +259,8 @@ const main = async (): Promise<void> => {
                         "linux:apk":      "sudo apk add --no-interactive git"
                     }
                 })
+
+                info("install Node.js")
                 ensureTool([ "node", "npm" ], {
                     hint: "https://nodejs.org",
                     install: {
@@ -259,6 +272,8 @@ const main = async (): Promise<void> => {
                         "linux:apk":      "sudo apk add --no-interactive nodejs npm"
                     }
                 })
+
+                info("install ANSI-Recolor")
                 ensureTool("ansi-recolor", {
                     hint: "https://github.com/rse/ansi-recolor",
                     install: {
@@ -267,6 +282,8 @@ const main = async (): Promise<void> => {
                         "linux:*":   "sudo npm install -g ansi-recolor"
                     }
                 })
+
+                info("install TypeScript-Language-Server")
                 ensureTool("typescript-language-server", {
                     hint: "https://github.com/typescript-language-server/typescript-language-server",
                     install: {
@@ -348,6 +365,60 @@ const main = async (): Promise<void> => {
                 await self("shell", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
             }
             else {
+                info("update Tmux")
+                executeCommand({
+                    "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e psmux",
+                    "windows:choco":  "choco upgrade -y --accept-license --no-progress psmux",
+                    "macos:ports":    "sudo port -N upgrade tmux",
+                    "macos:brew":     "sudo brew upgrade tmux",
+                    "linux:apt":      "sudo apt install --only-upgrade -y tmux",
+                    "linux:apk":      "sudo apk upgrade --no-interactive tmux"
+                })
+
+                info("update LazyGit")
+                executeCommand({
+                    "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
+                    "windows:choco":  "choco upgrade -y --accept-license --no-progress lazygit",
+                    "macos:ports":    "sudo port -N upgrade lazygit",
+                    "macos:brew":     "sudo brew upgrade lazygit",
+                    "linux:apt":      "sudo apt install --only-upgrade -y lazygit",
+                    "linux:apk":      "sudo apk upgrade --no-interactive lazygit"
+                })
+
+                info("update Git")
+                executeCommand({
+                    "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
+                    "windows:choco":  "choco upgrade -y --accept-license --no-progress git",
+                    "macos:ports":    "sudo port -N upgrade git",
+                    "macos:brew":     "sudo brew upgrade git",
+                    "linux:apt":      "sudo apt install --only-upgrade -y git",
+                    "linux:apk":      "sudo apk upgrade --no-interactive git"
+                })
+
+                info("update Node.js")
+                executeCommand({
+                    "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
+                    "windows:choco":  "choco upgrade -y --accept-license --no-progress nodejs",
+                    "macos:ports":    "sudo port -N upgrade nodejs24 npm11",
+                    "macos:brew":     "sudo brew upgrade node",
+                    "linux:apt":      "sudo apt install --only-upgrade -y nodejs",
+                    "linux:apk":      "sudo apk upgrade --no-interactive nodejs npm"
+                })
+
+                info("update ANSI-Recolor")
+                executeCommand({
+                    "windows:*": "npm install -g ansi-recolor",
+                    "macos:*":   "sudo npm install -g ansi-recolor",
+                    "linux:*":   "sudo npm install -g ansi-recolor"
+                })
+
+                info("update TypeScript-Language-Server")
+                executeCommand({
+                    "windows:*": "npm install -g typescript-language-server",
+                    "macos:*":   "sudo npm install -g typescript-language-server",
+                    "linux:*":   "sudo npm install -g typescript-language-server"
+                })
+
                 info("update Claude Code")
                 if (process.platform !== "win32") {
                     ensureTool("bash")
