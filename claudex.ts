@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/*
+/*!
 **  claudeX -- Claude Code eXtended
 **  Copyright (c) 2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
 **  Licensed under MIT <https://spdx.org/licenses/MIT>
