@@ -155,7 +155,7 @@ const main = async (): Promise<void> => {
                 await self("shell", "-s", "sudo", "-E", "apt", "upgrade", "-qq", "-y")
 
                 info("install Tmux / LF / LazyGit / FZF / RipGrep / Git")
-                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lf", "lazygit", "fzf", "ripgrep", "git")
+                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lf", "lazygit", "ripgrep", "git")
 
                 info("install Node.js")
                 await self("shell", "-s", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
@@ -493,22 +493,13 @@ const main = async (): Promise<void> => {
                         "bind-key", "g", "display-popup", "-E", "-w", "95%", "-h", "95%",
                             "-T", "─◀#[reverse] ⧉ Version Control (lazygit) #[noreverse]▶", `${selfPath} util lazygit`, ";",
                         "bind-key", "b", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                            "-T", "─◀#[reverse] ⧉ Shell (bash) #[noreverse]▶",              `${selfPath} util bash`,    ";",
-                        "bind-key", "s", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                            "-T", "─◀#[reverse] ⧉ Search Content (sc) #[noreverse]▶",       `${selfPath} util sc`,      ";",
+                            "-T", "─◀#[reverse] ⧉ Shell (bash) #[noreverse]▶",              `${selfPath} util bash`, ";",
                         "bind-key", "f", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                            "-T", "─◀#[reverse] ⧉ File Browser (lf) #[noreverse]▶",         `${selfPath} util lf`,      ";",
+                            "-T", "─◀#[reverse] ⧉ File Browser (lf) #[noreverse]▶",         `${selfPath} util lf`, ";",
                         "bind-key", "q", "display-popup", "-E", "-w", "95%", "-h", "95%",
                             "-T", "─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶", `${selfPath} util ase-task-edit`, ";",
                         ...argv
                     ])
-                    break
-                }
-                case "sc": {
-                    ensureTool("fzf")
-                    ensureTool("rg")
-                    ensureTool("vim")
-                    await execInherit("bash", [ path.join(basedir, "sc.bash"), ...argv ], { env: process.env })
                     break
                 }
                 case "lf": {
