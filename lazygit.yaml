@@ -5,7 +5,6 @@ gui:
     commitLength:
         show: false
     authorColors:
-        "Ralf S. Engelschall": "red"
         "*": "blue"
     branchColorPatterns:
         "*": "blue"
