@@ -181,9 +181,6 @@ const main = async (): Promise<void> => {
                 info("install TypeScript LS")
                 await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
 
-                info("install CCUsage")
-                await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ccusage")
-
                 info("install Claude wrapper")
                 await self("shell", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
             }
@@ -234,9 +231,6 @@ const main = async (): Promise<void> => {
 
                 info("update TypeScript LS")
                 await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
-
-                info("update CCUsage")
-                await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ccusage")
 
                 info("update Claude wrapper")
                 await self("shell", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
