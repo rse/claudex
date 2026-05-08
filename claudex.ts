@@ -528,9 +528,9 @@ const main = async (): Promise<void> => {
 
             /*  define list of environment variables  */
             const envs = [ "TERM", "HOME" ]
-            const env_opts: string[] = [ "-e", "!" ]
+            const envOpts: string[] = [ "-e", "!" ]
             for (const e of envs)
-                env_opts.push("-e", e)
+                envOpts.push("-e", e)
 
             /*  find list of dot-files (relative to $HOME)  */
             const dotfiles = [
@@ -557,21 +557,21 @@ const main = async (): Promise<void> => {
                 ".claude!",
                 ".claude.json!"
             ]
-            const dotfile_opts: string[] = [ "-m", "!" ]
+            const dotfileOpts: string[] = [ "-m", "!" ]
             for (const dotfile of dotfiles) {
                 const p = dotfile.endsWith("!") ? dotfile.slice(0, -1) : dotfile
                 if (fs.existsSync(path.join(HOME, p)))
-                    dotfile_opts.push("-m", dotfile)
+                    dotfileOpts.push("-m", dotfile)
             }
 
             /*  find all sensitive ".env" files from current working
                 directory up to root directory for hiding  */
-            const null_opts: string[] = [ "-n", "!" ]
+            const nullOpts: string[] = [ "-n", "!" ]
             let dir = process.cwd()
             while (true) {
                 const envFile = path.join(dir, ".env")
                 if (fs.existsSync(envFile) && fs.statSync(envFile).isFile())
-                    null_opts.push("-n", envFile)
+                    nullOpts.push("-n", envFile)
                 if (dir === "/")
                     break
                 dir = path.dirname(dir)
