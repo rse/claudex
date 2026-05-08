@@ -1,4 +1,5 @@
 ~$*
+.ase
 tsc.tsbuildinfo
 node_modules
 claudex.js
