@@ -8,7 +8,6 @@
     "homepage":         "http://github.com/rse/claudex",
     "repository":       { "url": "git+https://github.com/rse/claudex.git", "type": "git" },
     "bugs":             { "url": "http://github.com/rse/claudex/issues" },
-    "version":          "0.9.12",
     "license":          "MIT",
     "author": {
         "name":         "Dr. Ralf S. Engelschall",
@@ -17,16 +16,31 @@
     },
     "bin":              { "claudex": "claudex.js" },
     "dependencies": {
-        "which":        "7.0.0",
-        "execa":        "9.6.1",
-        "chalk":        "5.6.2"
+        "which":                       "7.0.0",
+        "execa":                       "9.6.1",
+        "chalk":                       "5.6.2"
     },
     "devDependencies": {
-        "typescript":   "6.0.3",
-        "@types/node":  "25.6.2",
-        "@types/which": "3.0.4"
+        "typescript":                  "6.0.3",
+        "@types/node":                 "25.6.2",
+        "@types/which":                "3.0.4",
+
+        "@rse/stx":                    "1.1.5",
+        "eslint":                      "9.39.4",
+        "@eslint/js":                  "9.39.4",
+        "typescript-eslint":           "8.59.2",
+        "@typescript-eslint/parser":   "8.59.2",
+        "eslint-plugin-promise":       "7.3.0",
+        "eslint-plugin-import":        "2.32.0",
+        "neostandard":                 "0.13.0",
+        "globals":                     "17.6.0",
+        "shx":                         "0.4.0"
+    },
+    "engines": {
+        "npm":                         ">=10.0.0",
+        "node":                        ">=22.0.0"
     },
     "scripts": {
-        "build":        "tsc"
+        "start":                       "stx -v 4 -c stx.conf"
     }
 }
