@@ -143,8 +143,8 @@ const main = async (): Promise<void> => {
                 await self("shell", "-s", "sudo", "-E", "apt", "update", "-qq")
                 await self("shell", "-s", "sudo", "-E", "apt", "upgrade", "-qq", "-y")
 
-                info("install Tmux / LF / LazyGit / Git")
-                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lf", "lazygit", "git")
+                info("install Tmux / LazyGit / Git")
+                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lazygit", "git")
 
                 info("install Node.js")
                 await self("shell", "-s", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
@@ -171,7 +171,6 @@ const main = async (): Promise<void> => {
                     ensureTool("tmux", { hint: "https://github.com/tmux/tmux/" })
                 else
                     ensureTool("tmux", { hint: "https://github.com/psmux/psmux" })
-                ensureTool("lf", { hint: "https://github.com/gokcehan/lf/" })
                 ensureTool("lazygit", { hint: "https://github.com/jesseduffield/lazygit/" })
                 ensureTool("git", { hint: "https://git-scm.com" })
                 ensureTool("node", { hint: "https://nodejs.org" })
@@ -543,24 +542,8 @@ const main = async (): Promise<void> => {
                             "-T", "─◀#[reverse] ⧉ Version Control (lazygit) #[noreverse]▶", `${selfPath} util lazygit`, ";",
                         "bind-key", "b", "display-popup", "-E", "-w", "95%", "-h", "95%",
                             "-T", "─◀#[reverse] ⧉ Shell (bash) #[noreverse]▶",              `${selfPath} util bash`, ";",
-                        "bind-key", "f", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                            "-T", "─◀#[reverse] ⧉ File Browser (lf) #[noreverse]▶",         `${selfPath} util lf`, ";",
                         "bind-key", "q", "display-popup", "-E", "-w", "95%", "-h", "95%",
                             "-T", "─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶", `${selfPath} util ase-task-edit`, ";",
-                        ...argv
-                    ])
-                    break
-                }
-                case "lf": {
-                    ensureTool("ansi-recolor")
-                    ensureTool("lf")
-                    ensureTool("vim")
-                    await execInherit("ansi-recolor", [
-                        "-c", path.join(basedir, "ansi-recolor.conf"),
-                        "-m",
-                        "-n", "lf",
-                        "-t", path.join(HOME, "ansi-recolor.txt"),
-                        "lf", "-config", path.join(basedir, "lf.conf"),
                         ...argv
                     ])
                     break

@@ -37,8 +37,7 @@ Claude Code command:
 - **Companion Tools**: It allows you to execute (visually in a modal window on top
   of Claude Code with the help of tmux popups) the companion tools
   [LazyGit](https://github.com/jesseduffield/lazygit) (for Git version
-  control), [LF](https://github.com/gokcehan/lf) (for Filesystem
-  Browsing), and [Bash](https://www.gnu.org/software/bash/)
+  control) and [Bash](https://www.gnu.org/software/bash/)
   (for Shell).
 
   *Rationale*: The most important companion tool is LazyGit, allowing
@@ -57,13 +56,9 @@ This is with LazyGit opened in a modal window:
 
 ![screenshot](screenshot-2.png)
 
-This is with LF opened in a modal window:
-
-![screenshot](screenshot-3.png)
-
 This is with Bash opened in a modal window:
 
-![screenshot](screenshot-4.png)
+![screenshot](screenshot-3.png)
 
 Installation
 ------------
