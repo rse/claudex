@@ -83,8 +83,8 @@ const execInherit = async (file: string, args: string[], opts: { env?: Env } = {
 /*  helper to execute a platform-specific command  */
 const executeCommand = (config: { [ platform: string ]: string[] | string }) => {
     const platform = detectPlatform()
-    const os = platform.split(":")[0]
-    const command = config[platform] ?? config[`${os}:*`]
+    const osName = platform.split(":")[0]
+    const command = config[platform] ?? config[`${osName}:*`]
     if (command === undefined)
         return -1
     const cmd = command instanceof Array ? command : command.split(/\s+/)
@@ -582,9 +582,9 @@ const main = async (): Promise<void> => {
                 "-c", "claude",
                 "-t", "debian",
                 "-P", "linux/arm64",
-                ...env_opts,
-                ...dotfile_opts,
-                ...null_opts,
+                ...envOpts,
+                ...dotfileOpts,
+                ...nullOpts,
                 "-p", "!",
                 "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`,
                 "-e", `CLAUDEX=${basedir}`,
