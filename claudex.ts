@@ -445,16 +445,16 @@ const main = async (): Promise<void> => {
                 }
 
                 /*  override Claude Code configuration  */
-                env.ANTHROPIC_BASE_URL               = `http://${ohost}`
                 env.ANTHROPIC_API_KEY                = ""
                 env.ANTHROPIC_AUTH_TOKEN             = "ollama"
-                env.CLAUDE_CODE_ATTRIBUTION_HEADER   = "0"
+                env.ANTHROPIC_BASE_URL               = `http://${ohost}`
+                env.ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES = capabilities
+                env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
                 env.ANTHROPIC_DEFAULT_OPUS_MODEL     = model
                 env.ANTHROPIC_DEFAULT_SONNET_MODEL   = model
-                env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
-                env.CLAUDE_CODE_SUBAGENT_MODEL       = model
+                env.CLAUDE_CODE_ATTRIBUTION_HEADER   = "0"
                 env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
-                env.ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES = capabilities
+                env.CLAUDE_CODE_SUBAGENT_MODEL       = model
                 env.DISABLE_LOGIN_COMMAND            = "1"
                 env.DISABLE_LOGOUT_COMMAND           = "1"
             }
