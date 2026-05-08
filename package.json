@@ -1,14 +1,13 @@
 {
-    "private":         true,
-    "name":            "claudex",
+    "name":            "@rse/claudex",
+    "publishConfig":   { "access": "public" },
     "version":         "0.9.12",
-    "description":     "Claude Code eXtended - opinionated Claude Code environment",
+    "description":     "Claude Code eXtended",
     "type":            "module",
     "license":         "MIT",
     "author":          "Dr. Ralf S. Engelschall <rse@engelschall.com>",
     "dependencies": {
-        "execa":       "9.6.1",
-        "zx":          "8.8.5"
+        "execa":       "9.6.1"
     },
     "devDependencies": {
         "typescript":  "6.0.3",
