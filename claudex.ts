@@ -50,10 +50,16 @@ const fatal = (msg: string): never => {
 }
 
 /*  helper to ensure a tool is available  */
-const ensureTool = (tool: string): void => {
+const ensureTool = (tool: string, options: { hint?: string, optional?: boolean } = {}): void => {
     const r = which.sync(tool, { nothrow: true })
-    if (r === null)
-        fatal(`required tool "${tool}" not found in $PATH`)
+    if (r === null) {
+        if (options.optional)
+            return
+        if (options.hint !== undefined)
+            fatal(`required tool "${tool}" not found in $PATH -- hint: ${options.hint}`)
+        else
+            fatal(`required tool "${tool}" not found in $PATH`)
+    }
 }
 
 /*  helper to spawn a child synchronously inheriting stdio, then exit
@@ -137,8 +143,8 @@ const main = async (): Promise<void> => {
                 await self("shell", "-s", "sudo", "-E", "apt", "update", "-qq")
                 await self("shell", "-s", "sudo", "-E", "apt", "upgrade", "-qq", "-y")
 
-                info("install Tmux / LF / LazyGit / FZF / RipGrep / Git")
-                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lf", "lazygit", "ripgrep", "git")
+                info("install Tmux / LF / LazyGit / Git")
+                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lf", "lazygit", "git")
 
                 info("install Node.js")
                 await self("shell", "-s", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
@@ -160,14 +166,53 @@ const main = async (): Promise<void> => {
                 await self("shell", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
             }
             else {
-                info("install Claude Code (on host)")
-                try { fs.unlinkSync(path.join(HOME, ".local/bin/claude")) } catch (_e) {}
-                const versionsDir = path.join(HOME, ".local/share/claude/versions")
-                if (fs.existsSync(versionsDir)) {
-                    for (const f of fs.readdirSync(versionsDir))
-                        try { fs.unlinkSync(path.join(versionsDir, f)) } catch (_e) {}
+                info("checking dependencies")
+                if (process.platform !== "win32")
+                    ensureTool("tmux", { hint: "https://github.com/tmux/tmux/" })
+                else
+                    ensureTool("tmux", { hint: "https://github.com/psmux/psmux" })
+                ensureTool("lf", { hint: "https://github.com/gokcehan/lf/" })
+                ensureTool("lazygit", { hint: "https://github.com/jesseduffield/lazygit/" })
+                ensureTool("git", { hint: "https://git-scm.com" })
+                ensureTool("node", { hint: "https://nodejs.org" })
+                ensureTool("ansi-recolor", { hint: "npm install -g ansi-recolor" })
+                ensureTool("typescript-language-server", { hint: "npm install -g typescript-language-server" })
+
+                info("install Claude Code")
+                if (process.platform !== "win32") {
+                    /*  remove obsolete versions  */
+                    try { fs.unlinkSync(path.join(HOME, ".local/bin/claude")) } catch (_e) {}
+                    const versionsDir = path.join(HOME, ".local/share/claude/versions")
+                    if (fs.existsSync(versionsDir)) {
+                        for (const f of fs.readdirSync(versionsDir))
+                            try { fs.unlinkSync(path.join(versionsDir, f)) } catch (_e) {}
+                    }
+
+                    /*  run installation script  */
+                    ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
+                    ensureTool("curl", { hint: "https://curl.se/" })
+                    await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash` ], {
+                        stdio: "inherit", reject: false
+                    })
                 }
-                await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash` ], { stdio: "inherit", reject: false })
+                else {
+                    if (!process.env.PSModulePath)
+                        fatal("on Windows the \"install\" command has to be run from within a PowerShell session")
+
+                    /*  remove obsolete versions  */
+                    try { fs.unlinkSync(path.join(HOME, ".local/bin/claude.exe")) } catch (_e) {}
+                    const versionsDir = path.join(HOME, ".local/share/claude/versions")
+                    if (fs.existsSync(versionsDir)) {
+                        for (const f of fs.readdirSync(versionsDir))
+                            try { fs.unlinkSync(path.join(versionsDir, f)) } catch (_e) {}
+                    }
+
+                    /*  run installation script  */
+                    ensureTool("powershell")
+                    await execa("powershell", [ "-NoProfile", "-Command", "irm https://claude.ai/install.ps1 | iex" ], {
+                        stdio: "inherit", reject: false
+                    })
+                }
             }
             break
         }
@@ -205,8 +250,21 @@ const main = async (): Promise<void> => {
                 await self("shell", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
             }
             else {
-                info("update Claude Code (on host)")
-                await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update` ], { stdio: "inherit", reject: false })
+                info("update Claude Code")
+                if (process.platform !== "win32") {
+                    ensureTool("bash")
+                    await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update` ], {
+                        stdio: "inherit", reject: false
+                    })
+                }
+                else {
+                    if (!process.env.PSModulePath)
+                        fatal("on Windows the \"update\" command has to be run from within a PowerShell session")
+                    ensureTool("powershell")
+                    await execa("powershell", [ "-NoProfile", "-Command", "claude update" ], {
+                        stdio: "inherit", reject: false
+                    })
+                }
             }
             break
         }
@@ -236,6 +294,7 @@ const main = async (): Promise<void> => {
             /*  dispatch according to environment  */
             if (sandbox) {
                 /*  enter/start container  */
+                ensureTool("docker")
                 const container = `capsula-${USER}-debian-claude-${session}`
                 const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
                 if (inspect.exitCode === 0) {
@@ -266,6 +325,7 @@ const main = async (): Promise<void> => {
 
             /*  dispatch according to environment  */
             if (sandbox) {
+                ensureTool("docker")
                 const session = "default"
                 const container = `capsula-${USER}-debian-claude-${session}`
                 const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
