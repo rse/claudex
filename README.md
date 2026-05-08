@@ -7,15 +7,6 @@ environment for macOS and Linux. It mainly provides a thin `claudex` (claude eXt
 wrapper command which provides the following distinct features on top of the regular
 Claude Code command:
 
-- **Encapsulated Runtime**: It uses the companion tool
-  [capsula](https://github.com/rse/capsula), also from RSE, for
-  executing `claude` inside a cleverly established Docker container,
-  which mimicks the host environment (filesystem layout, user/group
-  name/id, etc) as close as possible.
-
-  *Rationale*: Prevents any programs `claude` spawns from
-  damaging more than the current working directory.
-
 - **Adjusted Theme**: It uses the companion tool [ansi-recolor](https://github.com/rse/ansi-recolor),
   also from RSE, to on-the-fly re-color Claude Code's terminal UI
   (configured to run in regular light theme) into the RSE brown/blue
@@ -33,6 +24,15 @@ Claude Code command:
 
   *Rationale*: Allow one to easily run multiple Claude Code sessions in
   parallel with full terminal interaction.
+
+- **Encapsulated Runtime**: It optionally uses the companion tool
+  [capsula](https://github.com/rse/capsula), also from RSE, for
+  executing `claude` inside a cleverly established Docker container,
+  which mimicks the host environment (filesystem layout, user/group
+  name/id, etc) as close as possible.
+
+  *Rationale*: Prevents any programs `claude` spawns from
+  damaging more than the current working directory.
 
 - **Companion Tools**: It allows you to execute (visually in a modal window on top
   of Claude Code with the help of tmux popups) the companion tools
