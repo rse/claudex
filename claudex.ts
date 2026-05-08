@@ -104,7 +104,7 @@ const ensureTool = (tool: string | string[], options: {
     hint?:     string,
     optional?: boolean
 } = {}): void => {
-    const tools = typeof tool === "string" ? [ tool ]: tool
+    const tools = typeof tool === "string" ? [ tool ] : tool
     for (const tool of tools) {
         const r = which.sync(tool, { nothrow: true })
         if (r === null) {
@@ -296,11 +296,20 @@ const main = async (): Promise<void> => {
                 info("install Claude Code")
                 /*  helper: remove obsolete Claude Code versions  */
                 const removeObsoleteClaudeVersions = (binName: string): void => {
-                    try { fs.unlinkSync(path.join(HOME, ".local/bin", binName)) } catch (_e) {}
+                    try {
+                        fs.unlinkSync(path.join(HOME, ".local/bin", binName))
+                    }
+                    catch (_e) {
+                    }
                     const versionsDir = path.join(HOME, ".local/share/claude/versions")
                     if (fs.existsSync(versionsDir)) {
-                        for (const f of fs.readdirSync(versionsDir))
-                            try { fs.unlinkSync(path.join(versionsDir, f)) } catch (_e) {}
+                        for (const f of fs.readdirSync(versionsDir)) {
+                            try {
+                                fs.unlinkSync(path.join(versionsDir, f))
+                            }
+                            catch (_e) {
+                            }
+                        }
                     }
                 }
                 if (process.platform !== "win32") {
@@ -702,11 +711,11 @@ const main = async (): Promise<void> => {
                         "bind-key", "|",   "split-window", "-c", "#{pane_current_path}", "-h",           `${selfPath} claude`, ";",
                         "bind-key", "-",   "split-window", "-c", "#{pane_current_path}", "-v",           `${selfPath} claude`, ";",
                         "bind-key", "g", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                            "-T", "─◀#[reverse] ⧉ Version Control (lazygit) #[noreverse]▶", `${selfPath} util lazygit`, ";",
+                        "-T", "─◀#[reverse] ⧉ Version Control (lazygit) #[noreverse]▶", `${selfPath} util lazygit`, ";",
                         "bind-key", "b", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                            "-T", "─◀#[reverse] ⧉ Shell (bash) #[noreverse]▶",              `${selfPath} util bash`, ";",
+                        "-T", "─◀#[reverse] ⧉ Shell (bash) #[noreverse]▶",              `${selfPath} util bash`, ";",
                         "bind-key", "q", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                            "-T", "─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶", `${selfPath} util ase-task-edit`, ";",
+                        "-T", "─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶", `${selfPath} util ase-task-edit`, ";",
                         ...argv
                     ])
                     break
