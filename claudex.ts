@@ -171,12 +171,12 @@ const main = async (): Promise<void> => {
                     ensureTool("tmux", { hint: "https://github.com/tmux/tmux/" })
                 else
                     ensureTool("tmux", { hint: "https://github.com/psmux/psmux" })
-                ensureTool("lazygit", { hint: "https://github.com/jesseduffield/lazygit/" })
-                ensureTool("git", { hint: "https://git-scm.com" })
+                ensureTool("lazygit", { hint: "https://github.com/jesseduffield/lazygit/", optional: true })
+                ensureTool("git", { hint: "https://git-scm.com", optional: true })
                 ensureTool("node", { hint: "https://nodejs.org" })
                 ensureTool("npm", { hint: "https://nodejs.org" })
                 ensureTool("ansi-recolor", { hint: "npm install -g ansi-recolor" })
-                ensureTool("typescript-language-server", { hint: "npm install -g typescript-language-server" })
+                ensureTool("typescript-language-server", { hint: "npm install -g typescript-language-server", optional: true })
 
                 info("install Claude Code")
                 if (process.platform !== "win32") {
@@ -435,8 +435,6 @@ const main = async (): Promise<void> => {
             process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
             ensureTool("ansi-recolor")
             ensureTool("claude")
-            ensureTool("node")
-            ensureTool("npm")
             const env: Env = { ...process.env as Env }
             const claudeModel = process.env.CLAUDE_MODEL ?? ""
             if (/^ollama:/.test(claudeModel)) {
@@ -570,7 +568,7 @@ const main = async (): Promise<void> => {
                     ensureTool("ansi-recolor")
                     ensureTool("git")
                     ensureTool("lazygit")
-                    ensureTool("vim")
+                    ensureTool("vim", { optional: true })
                     const env: Env = { ...process.env as Env, TERM: "xterm-color" }
                     await execInherit("ansi-recolor", [
                         "-c", path.join(basedir, "ansi-recolor.conf"),
