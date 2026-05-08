@@ -5,9 +5,9 @@
 **  Licensed under MIT <https://spdx.org/licenses/MIT>
 */
 
-import * as fs    from "node:fs"
-import * as path  from "node:path"
-import * as os    from "node:os"
+import * as fs              from "node:fs"
+import * as path            from "node:path"
+import * as os              from "node:os"
 import { execa, execaSync } from "execa"
 
 /*  type for environment variable map  */
