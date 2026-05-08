@@ -123,6 +123,12 @@ const ensureTool = (tool: string | string[], options: {
     }
 }
 
+/*  helper to POSIX-single-quote-escape a string for safe interpolation
+    into a "bash -c" command line (defense against shell injection of
+    user-supplied or env-derived values)  */
+const shq = (s: string): string =>
+    `'${s.replace(/'/g, "'\\''")}'`
+
 /*  re-invoke this same script (mirrors "$0 ..." in Bash)  */
 const self = async (...args: string[]): Promise<number> => {
     const r = await execa(process.execPath, [ selfPathJS, ...args ], {
@@ -480,7 +486,7 @@ const main = async (): Promise<void> => {
                     await execInherit("docker", [
                         "exec", "-i", "-t", container,
                         "bash", "-c",
-                        `TERM=${TERM} HOME=${HOME} sudo -E -u ${USER} ${selfPath} util tmux new-session -A -s "${session}"`
+                        `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(selfPath)} util tmux new-session -A -s ${shq(session)}`
                     ])
                 }
                 else {
@@ -509,11 +515,11 @@ const main = async (): Promise<void> => {
                 const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
                 if (inspect.exitCode === 0) {
                     /*  enter already running container and run claude (single-quote shell-escape)  */
-                    const passthru = argv.map((a) => `'${a.replace(/'/g, "'\\''")}'`).join(" ")
+                    const passthru = argv.map(shq).join(" ")
                     await execInherit("docker", [
                         "exec", "-i", "-t", container,
                         "bash", "-c",
-                        `TERM=${TERM} HOME=${HOME} sudo -E -u ${USER} ${selfPath} claude ${passthru}`
+                        `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(selfPath)} claude ${passthru}`
                     ])
                 }
                 else {
