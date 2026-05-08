@@ -157,14 +157,6 @@ const main = async (): Promise<void> => {
                 info("install Tmux / LF / LazyGit / FZF / RipGrep / Git")
                 await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lf", "lazygit", "fzf", "ripgrep", "git")
 
-                info("install Bat")
-                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "bat")
-                await self("shell", "-s", "sudo", "-E", "ln", "-f", "/usr/bin/batcat", "/usr/bin/bat")
-                let bcmd = "export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
-                bcmd += ` mkdir -p $BAT_CONFIG_DIR/themes; cp ${basedir}/bat.tmTheme $BAT_CONFIG_DIR/themes/;`
-                bcmd += " bat cache --build"
-                await self("shell", "-s", "sudo", "-E", "bash", "-c", bcmd)
-
                 info("install Node.js")
                 await self("shell", "-s", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
                 await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "nodejs")
@@ -216,12 +208,6 @@ const main = async (): Promise<void> => {
                 info("update Debian GNU/Linux operating system")
                 await self("shell", "-s", "sudo", "apt", "update", "-qq")
                 await self("shell", "-s", "sudo", "apt", "upgrade", "-qq", "-y")
-
-                info("update Bat")
-                let bcmd = "export BAT_CONFIG_DIR=/etc/bat; export BAT_CACHE_PATH=/etc/bat;"
-                bcmd += ` mkdir -p $BAT_CONFIG_DIR/themes; cp ${basedir}/bat.tmTheme $BAT_CONFIG_DIR/themes/;`
-                bcmd += " bat cache --build"
-                await self("shell", "-s", "sudo", "-E", "bash", "-c", bcmd)
 
                 info("update Claude Code")
                 await self("shell", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update`)
@@ -521,15 +507,8 @@ const main = async (): Promise<void> => {
                 case "sc": {
                     ensureTool("fzf")
                     ensureTool("rg")
-                    ensureTool("bat")
                     ensureTool("vim")
-                    const env: Env = { ...process.env as Env }
-                    if (ENVIRONMENT === "capsula") {
-                        env.BAT_CONFIG_DIR = "/etc/bat"
-                        env.BAT_CACHE_PATH = "/etc/bat"
-                        env.BAT_THEME      = "bat"
-                    }
-                    await execInherit("bash", [ path.join(basedir, "sc.bash"), ...argv ], { env })
+                    await execInherit("bash", [ path.join(basedir, "sc.bash"), ...argv ], { env: process.env })
                     break
                 }
                 case "lf": {
