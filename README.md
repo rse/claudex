@@ -61,13 +61,9 @@ This is with LF opened in a modal window:
 
 ![screenshot](screenshot-3.png)
 
-This is with SC opened in a modal window:
-
-![screenshot](screenshot-4.png)
-
 This is with Bash opened in a modal window:
 
-![screenshot](screenshot-5.png)
+![screenshot](screenshot-4.png)
 
 Installation
 ------------
