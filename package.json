@@ -4,8 +4,18 @@
     "version":         "0.9.12",
     "description":     "Claude Code eXtended",
     "type":            "module",
+    "keywords":        [ "claude", "code", "extension", "wrapper" ],
+    "homepage":        "http://github.com/rse/claudex",
+    "repository":      { "url": "git+https://github.com/rse/claudex.git", "type": "git" },
+    "bugs":            { "url": "http://github.com/rse/claudex/issues" },
+    "version":         "0.9.12",
     "license":         "MIT",
-    "author":          "Dr. Ralf S. Engelschall <rse@engelschall.com>",
+    "author": {
+        "name":        "Dr. Ralf S. Engelschall",
+        "email":       "rse@engelschall.com",
+        "url":         "http://engelschall.com"
+    },
+    "bin":             { "claudex": "claudex.js" },
     "dependencies": {
         "execa":       "9.6.1"
     },
