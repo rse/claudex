@@ -50,15 +50,15 @@ The following is a main view of the macOS Terminal with a **claudeX**
 session running. Three Claude Code instances are running in separate
 panes of the screen.
 
-![screenshot](screenshot-1.png)
+![screenshot](doc/screenshot-1.png)
 
 This is with LazyGit opened in a modal window:
 
-![screenshot](screenshot-2.png)
+![screenshot](doc/screenshot-2.png)
 
 This is with Bash opened in a modal window:
 
-![screenshot](screenshot-3.png)
+![screenshot](doc/screenshot-3.png)
 
 Installation
 ------------
