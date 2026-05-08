@@ -355,10 +355,8 @@ const main = async () => {
                 "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`,
                 "-e", `CLAUDEX=${basedir}`,
                 "-b", basedir,
-                "-b", "/Users/rse/Work/ase",
                 ...argv
             ]);
-            /*  FIXME: remove "-b /Users/rse/Work/ase" for non-debugging purposes  */
             break;
         }
         case "claude": {
