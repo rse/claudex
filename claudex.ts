@@ -175,6 +175,7 @@ const main = async (): Promise<void> => {
                 ensureTool("lazygit", { hint: "https://github.com/jesseduffield/lazygit/" })
                 ensureTool("git", { hint: "https://git-scm.com" })
                 ensureTool("node", { hint: "https://nodejs.org" })
+                ensureTool("npm", { hint: "https://nodejs.org" })
                 ensureTool("ansi-recolor", { hint: "npm install -g ansi-recolor" })
                 ensureTool("typescript-language-server", { hint: "npm install -g typescript-language-server" })
 
@@ -198,6 +199,11 @@ const main = async (): Promise<void> => {
                 else {
                     if (!process.env.PSModulePath)
                         fatal("on Windows the \"install\" command has to be run from within a PowerShell session")
+
+                    // winget install psmux
+                    // winget install -e --id JesseDuffield.lazygit
+                    // winget install -e --id Git.Git --source winget
+                    // winget install -e --id OpenJS.NodeJS.LTS
 
                     /*  remove obsolete versions  */
                     try { fs.unlinkSync(path.join(HOME, ".local/bin/claude.exe")) } catch (_e) {}
