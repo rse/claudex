@@ -49,17 +49,23 @@ const fatal = (msg: string): never => {
     process.exit(1)
 }
 
-/*  helper to ensure a tool is available  */
-const ensureTool = (tool: string, options: { hint?: string, optional?: boolean } = {}): void => {
-    const r = which.sync(tool, { nothrow: true })
-    if (r === null) {
-        if (options.optional)
-            return
-        if (options.hint !== undefined)
-            fatal(`required tool "${tool}" not found in $PATH -- hint: ${options.hint}`)
-        else
-            fatal(`required tool "${tool}" not found in $PATH`)
-    }
+/*  helper for detecting the platform and package manager combination  */
+const detectPlatform = (): string => {
+    const has = (tool: string): boolean => which.sync(tool, { nothrow: true }) !== null
+    if (process.platform === "win32" && has("winget"))
+        return "windows:winget"
+    else if (process.platform === "win32" && has("choco"))
+        return "windows:choco"
+    else if (process.platform === "darwin" && has("port"))
+        return "macos:ports"
+    else if (process.platform === "darwin" && has("brew"))
+        return "macos:brew"
+    else if (process.platform === "linux" && has("apt"))
+        return "linux:apt"
+    else if (process.platform === "linux" && has("apk"))
+        return "linux:apk"
+    else
+        return fatal(`unsupported platform "${process.platform}" or no known package manager found`)
 }
 
 /*  helper to spawn a child synchronously inheriting stdio, then exit
@@ -72,6 +78,43 @@ const execInherit = async (file: string, args: string[], opts: { env?: Env } = {
         windowsHide:  false
     })
     process.exit(r.exitCode ?? 0)
+}
+
+/*  helper to ensure a tool is available  */
+const ensureTool = (tool: string | string[], options: {
+    install?:  { [ platform: string ]: string[] | string },
+    hint?:     string,
+    optional?: boolean
+} = {}): void => {
+    const tools = typeof tool === "string" ? [ tool ]: tool
+    for (const tool of tools) {
+        const r = which.sync(tool, { nothrow: true })
+        if (r === null) {
+            if (options.install) {
+                const platform = detectPlatform()
+                const os = platform.split(":")[0]
+                const command = options.install[platform] ?? options.install[`${os}:*`]
+                if (command !== undefined) {
+                    const cmd = command instanceof Array ? command : command.split(/\s+/)
+                    info(`running: $ ${cmd.join(" ")}`)
+                    const result = execaSync(cmd[0], cmd.slice(1), {
+                        stdio:        "inherit",
+                        env:          process.env,
+                        reject:       options.optional ? false : true,
+                        windowsHide:  false
+                    })
+                    if ((result.exitCode ?? 0) === 0)
+                        continue
+                }
+            }
+            if (options.optional)
+                continue
+            if (options.hint !== undefined)
+                fatal(`required tool "${tool}" not found in $PATH -- hint: ${options.hint}`)
+            else
+                fatal(`required tool "${tool}" not found in $PATH`)
+        }
+    }
 }
 
 /*  re-invoke this same script (mirrors "$0 ..." in Bash)  */
@@ -167,16 +210,71 @@ const main = async (): Promise<void> => {
             }
             else {
                 info("checking dependencies")
-                if (process.platform !== "win32")
-                    ensureTool("tmux", { hint: "https://github.com/tmux/tmux/" })
-                else
-                    ensureTool("tmux", { hint: "https://github.com/psmux/psmux" })
-                ensureTool("lazygit", { hint: "https://github.com/jesseduffield/lazygit/", optional: true })
-                ensureTool("git", { hint: "https://git-scm.com", optional: true })
-                ensureTool("node", { hint: "https://nodejs.org" })
-                ensureTool("npm", { hint: "https://nodejs.org" })
-                ensureTool("ansi-recolor", { hint: "npm install -g ansi-recolor" })
-                ensureTool("typescript-language-server", { hint: "npm install -g typescript-language-server", optional: true })
+                const platform = detectPlatform()
+                ensureTool("tmux", {
+                    hint: platform.match(/^windows:/) ?
+                        "https://github.com/psmux/psmux" :
+                        "https://github.com/tmux/tmux/",
+                    install: {
+                        "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e psmux",
+                        "windows:choco":  "choco install -y --accept-license --no-progress psmux",
+                        "macos:ports":    "sudo port -N install tmux",
+                        "macos:brew":     "sudo brew install tmux",
+                        "linux:apt":      "sudo apt install -y tmux",
+                        "linux:apk":      "sudo apk add --no-interactive tmux"
+                    }
+                })
+                ensureTool("lazygit", {
+                    optional: true,
+                    hint: "https://github.com/jesseduffield/lazygit/",
+                    install: {
+                        "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
+                        "windows:choco":  "choco install -y --accept-license --no-progress lazygit",
+                        "macos:ports":    "sudo port -N install lazygit",
+                        "macos:brew":     "sudo brew install lazygit",
+                        "linux:apt":      "sudo apt install -y lazygit",
+                        "linux:apk":      "sudo apk add --no-interactive lazygit"
+                    }
+                })
+                ensureTool("git", {
+                    optional: true,
+                    hint: "https://git-scm.com",
+                    install: {
+                        "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
+                        "windows:choco":  "choco install -y --accept-license --no-progress git",
+                        "macos:ports":    "sudo port -N install git",
+                        "macos:brew":     "sudo brew install git",
+                        "linux:apt":      "sudo apt install -y git",
+                        "linux:apk":      "sudo apk add --no-interactive git"
+                    }
+                })
+                ensureTool([ "node", "npm" ], {
+                    hint: "https://nodejs.org",
+                    install: {
+                        "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
+                        "windows:choco":  "choco install -y --accept-license --no-progress nodejs",
+                        "macos:ports":    "sudo port -N install nodejs24 npm11",
+                        "macos:brew":     "sudo brew install node",
+                        "linux:apt":      "curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - && sudo apt install -y nodejs",
+                        "linux:apk":      "sudo apk add --no-interactive nodejs npm"
+                    }
+                })
+                ensureTool("ansi-recolor", {
+                    hint: "https://github.com/rse/ansi-recolor",
+                    install: {
+                        "windows:*": "npm install -g ansi-recolor",
+                        "macos:*":   "sudo npm install -g ansi-recolor",
+                        "linux:*":   "sudo npm install -g ansi-recolor"
+                    }
+                })
+                ensureTool("typescript-language-server", {
+                    hint: "https://github.com/typescript-language-server/typescript-language-server",
+                    install: {
+                        "windows:*": "npm install -g typescript-language-server",
+                        "macos:*":   "sudo npm install -g typescript-language-server",
+                        "linux:*":   "sudo npm install -g typescript-language-server"
+                    }
+                })
 
                 info("install Claude Code")
                 if (process.platform !== "win32") {
@@ -198,11 +296,6 @@ const main = async (): Promise<void> => {
                 else {
                     if (!process.env.PSModulePath)
                         fatal("on Windows the \"install\" command has to be run from within a PowerShell session")
-
-                    // winget install psmux
-                    // winget install -e --id JesseDuffield.lazygit
-                    // winget install -e --id Git.Git --source winget
-                    // winget install -e --id OpenJS.NodeJS.LTS
 
                     /*  remove obsolete versions  */
                     try { fs.unlinkSync(path.join(HOME, ".local/bin/claude.exe")) } catch (_e) {}
