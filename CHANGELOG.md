@@ -6,8 +6,13 @@ ChangeLog
 -------------------
 
 - IMPROVEMENT: support CLAUDEX\_FLAGS env variable for passing default options
+- IMPROVEMENT: improve temp file cleanup approach for tmux config
+- BUGFIX: ensure docker container is really running
+- BUGFIX: fix typo
+- UPDATE: align AGENTS.md with current code state
 - CLEANUP: internally, use CLAUDEX\_FLAGS\_PASSTHROUGH for the option passing
 - CLEANUP: always use "node claudex.js" internally for self-execution
+- REFACTOR: move pruning of obsolete Claude versions to later in flow
 
 0.9.20 (2026-05-09)
 -------------------
