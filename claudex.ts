@@ -1015,7 +1015,7 @@ const main = async (): Promise<void> => {
         .helpOption(false)
         .option("-C, --capsula",        "execute Claude Code inside a Capsula sandbox container")
         .option("-T, --tmux [session]", "wrap Claude Code in a Tmux terminal multiplexing session (optional session name)")
-        .option("-R, --recolor",        "wrap Claude Code with ANSI recoloing for improved theming")
+        .option("-R, --recolor",        "wrap Claude Code with ANSI recoloring for improved theming")
         .option("-A, --ase",            "enable ASE-specific Claude Code statusline and ASE_* environment variables")
         .argument("[args...]",          "arguments passed unparsed to Claude Code")
         .action((args: string[], opts: TopOpts) => {
