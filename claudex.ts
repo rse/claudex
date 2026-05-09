@@ -52,6 +52,28 @@ const fatal = (msg: string): never => {
 /*  helper for detecting the platform and package manager combination  */
 const detectPlatform = (): string => {
     const has = (tool: string): boolean => which.sync(tool, { nothrow: true }) !== null
+    /*  honor explicit override via CLAUDEX_PKG (e.g. "brew", "ports", "apt", ...)
+        to disambiguate hosts where multiple package managers are installed  */
+    const override = process.env.CLAUDEX_PKG ?? ""
+    if (override !== "") {
+        const pm: Record<string, { plat: string, tool: string, key: string }> = {
+            winget: { plat: "win32",  tool: "winget", key: "windows:winget" },
+            choco:  { plat: "win32",  tool: "choco",  key: "windows:choco"  },
+            ports:  { plat: "darwin", tool: "port",   key: "macos:ports"    },
+            brew:   { plat: "darwin", tool: "brew",   key: "macos:brew"     },
+            apt:    { plat: "linux",  tool: "apt",    key: "linux:apt"      },
+            apk:    { plat: "linux",  tool: "apk",    key: "linux:apk"      }
+        }
+        const entry = pm[override]
+        if (entry === undefined)
+            return fatal(`unknown CLAUDEX_PKG value "${override}" ` +
+                `(allowed: ${Object.keys(pm).join(", ")})`)
+        if (process.platform !== entry.plat)
+            return fatal(`CLAUDEX_PKG="${override}" is not valid on platform "${process.platform}"`)
+        if (!has(entry.tool))
+            return fatal(`CLAUDEX_PKG="${override}" requested but tool "${entry.tool}" not found in $PATH`)
+        return entry.key
+    }
     if (process.platform === "win32" && has("winget"))
         return "windows:winget"
     else if (process.platform === "win32" && has("choco"))
