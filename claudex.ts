@@ -668,10 +668,10 @@ const actionInternal = async (args: string[]): Promise<void> => {
     }
 }
 
-/*  action: top-level default -- run claude, optionally wrapped by tmux and/or capsula  */
+/*  action: top-level command -- run "claude"  */
 const actionDefault = (opts: TopOpts, args: string[]): never => {
-    /*  build the inner self-invocation flag list (pass-through "-R" only;
-        "-C" and "-T" are consumed at the outer layer to avoid recursion)  */
+    /*  build the inner self-invocation flag list. Pass-through "-R" only,
+        as "-C" and "-T" are consumed at the outer layer to avoid recursion.  */
     const innerFlags: string[] = []
     if (opts.recolor)
         innerFlags.push("-R")
@@ -865,30 +865,31 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
     }
 }
 
-/*  action: top-level "-h/--help" -- run "claude --help" and append our extension info  */
+/*  action: top-level "-h/--help"  */
 const actionHelp = (): never => {
+    /*  run "claude --help"  */
     process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
     ensureTool("claude")
     const claudeBin = path.join(HOME, ".local/bin/claude")
-    const r = execaSync(claudeBin, [ "--help" ], { reject: false, stdio: [ "ignore", "pipe", "inherit" ] })
-    process.stdout.write(r.stdout ?? "")
+    execaSync(claudeBin, [ "--help" ], { reject: false, stdio: [ "ignore", "inherit", "inherit" ] })
+
+    /*  append our claudeX extension information  */
     process.stdout.write(
         "\n" +
-        "\n" +
         "claudeX extension options (honored before claude):\n" +
-        "  -C, --capsula  execute Claude Code inside a Capsula sandbox container\n" +
-        "  -R, --recolor  wrap Claude Code with ansi-recolor for theming\n" +
-        "  -T, --tmux     wrap Claude Code in a tmux session\n" +
+        "  -C, --capsula        execute Claude Code inside a Capsula sandbox container\n" +
+        "  -R, --recolor        wrap Claude Code with ANSI recoloring for improved theming\n" +
+        "  -T, --tmux           wrap Claude Code in a Tmux terminal multiplexing session\n" +
         "\n" +
         "claudeX extension subcommands (honored before claude):\n" +
-        "  install        install host-side or in-container dependencies\n" +
-        "  update         update host-side or in-container dependencies\n" +
-        "  internal …     internal command dispatcher (tmux, shell, lazygit, ase-task-edit, capsula)\n"
+        "  install              install host-side or in-container dependencies\n" +
+        "  update               update  host-side or in-container dependencies\n" +
+        "  internal …           internal command dispatcher (internal use only)\n"
     )
-    process.exit(r.exitCode ?? 0)
+    process.exit(0)
 }
 
-/*  the main procedure -- builds and dispatches a commander program  */
+/*  the main procedure -- builds and dispatches according to options and commands  */
 const main = async (): Promise<void> => {
     /*  intercept top-level "-h/--help" before commander grabs it, so we can
         pass-through to "claude --help" and append our extension info  */
@@ -900,6 +901,7 @@ const main = async (): Promise<void> => {
         && subcmd !== "install" && subcmd !== "update" && subcmd !== "internal")
         actionHelp()
 
+    /*  dispatch main command  */
     const program = new Command()
     program
         .name("claudex")
@@ -917,26 +919,27 @@ const main = async (): Promise<void> => {
             actionDefault(opts, args)
         })
 
+    /*  dispatch "install" sub-command  */
     program
         .command("install")
         .description("install host-side or in-container dependencies")
         .helpOption("-h, --help", "display help for command")
-        .option("-C, --capsula", "operate on the Capsula container instead of the host")
-        .action(async (opts: { capsula?: boolean }, cmd: Command) => {
-            const capsula = (opts.capsula === true) || (cmd.parent?.opts().capsula === true)
+        .action(async (_opts: object, cmd: Command) => {
+            const capsula = cmd.parent?.opts().capsula === true
             await actionInstall(capsula)
         })
 
+    /*  dispatch "update" sub-command  */
     program
         .command("update")
         .description("update host-side or in-container dependencies")
         .helpOption("-h, --help", "display help for command")
-        .option("-C, --capsula", "operate on the Capsula container instead of the host")
-        .action(async (opts: { capsula?: boolean }, cmd: Command) => {
-            const capsula = (opts.capsula === true) || (cmd.parent?.opts().capsula === true)
+        .action(async (_opts: object, cmd: Command) => {
+            const capsula = cmd.parent?.opts().capsula === true
             await actionUpdate(capsula)
         })
 
+    /*  dispatch "internal" sub-command  */
     program
         .command("internal")
         .description("internal command dispatcher (tmux, shell, lazygit, ase-task-edit, capsula)")
