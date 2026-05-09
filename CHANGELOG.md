@@ -9,7 +9,7 @@ ChangeLog
 - IMPROVEMENT: provide convenience keystrokes including CTRL+t for task switching
 - IMPROVEMENT: improve temp file cleanup approach for tmux config
 - BUGFIX: ensure docker container is really running
-- BUGFIX: fix typo
+- BUGFIX: fix typo in code
 - UPDATE: align AGENTS.md with current code state
 - CLEANUP: internally, use CLAUDEX\_FLAGS\_PASSTHROUGH for the option passing
 - CLEANUP: always use "node claudex.js" internally for self-execution
