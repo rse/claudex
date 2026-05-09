@@ -44,7 +44,7 @@ Subcommands:
 - `shell` &mdash; spawn `capsula` with the curated env-var allowlist, dotfile mount list,
   `-b basedir`, and arbitrary trailing args. Used internally to enter the container.
 - `claude` &mdash; the actual `claude` invocation. Wraps `claude` with `ansi-recolor` for theming;
-  injects `claude-settings.json` (with `@BASEDIR@` substituted) via `--settings`; if
+  injects `claude-settings.json` via `--settings`; if
   `CLAUDE_MODEL=ollama:[//host]/model[?context=,capabilities=]` is set, rewrites
   `ANTHROPIC_*` env vars to point at a local Ollama server; auto-derives `ASE_TERM_WIDTH`
   / `ASE_TERM_COLORS` from the TTY for ASE diagram rendering.
