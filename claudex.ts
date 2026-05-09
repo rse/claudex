@@ -554,12 +554,12 @@ const actionInternalTmux = (args: string[]): never => {
     if (isPsmux()) {
         /*  psmux does not honor the reverse ANSI sequence in at least the statusline  */
         conf = conf.replace(/fg=default,bg=default,reverse/, "bg=black,fg=color15")
-            .replaceAll(/(status.*?)fg=blue,reverse/, "$1bg=blue,fg=color15")
-            .replaceAll(/(status.*?)fg=blue/,         "$1bg=blue,fg=color15")
-            .replaceAll(/(status.*?)fg=red/,          "$1bg=red,fg=color15")
-            .replaceAll(/(status.*?)fg=default/,      "$1bg=black,fg=color15")
-            .replaceAll(/#\[reverse\]/,               "#[bg=red,fg=color15]")
-            .replaceAll(/#\[noreverse\]/,             "#[fg=red,bg=default]")
+            .replaceAll(/(status.*?)fg=blue,reverse/g, "$1bg=blue,fg=color15")
+            .replaceAll(/(status.*?)fg=blue/g,         "$1bg=blue,fg=color15")
+            .replaceAll(/(status.*?)fg=red/g,          "$1bg=red,fg=color15")
+            .replaceAll(/(status.*?)fg=default/g,      "$1bg=black,fg=color15")
+            .replaceAll(/#\[reverse\]/g,               "#[bg=red,fg=color15]")
+            .replaceAll(/#\[noreverse\]/g,             "#[fg=red,bg=default]")
     }
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
