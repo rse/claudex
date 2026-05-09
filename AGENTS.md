@@ -15,10 +15,9 @@ modal companion tools (LazyGit, Bash) into a single `claudex` command.
 
 The project is written in TypeScript and built via the `stx` task runner (config in `stx.conf`).
 
-- `npm start` &mdash; runs the default target (`build`): ESLint + `tsc`.
-- `stx build` &mdash; same as above (lint then compile `claudex.ts` &rarr; `claudex.js`).
-- `stx clean` &mdash; remove generated `claudex.js` and `tsc.tsbuildinfo`.
-- `stx clean-dist` &mdash; also remove `node_modules` and `package-lock.json`.
+- `npm start build` &mdash; runs the build procedcure: `eslint` + `tsc`.
+- `npm start clean` &mdash; remove generated `claudex.js` and `tsc.tsbuildinfo`.
+- `npm start clean-dist` &mdash; also remove `node_modules` and `package-lock.json`.
 
 There are no tests in this repository.
 
