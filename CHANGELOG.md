@@ -5,8 +5,12 @@ ChangeLog
 0.9.23 (2026-05-10)
 -------------------
 
+- IMPROVEMENT: detect psmux on Windows and apply tmux.conf color fallback
 - IMPROVEMENT: replace "echo $LOGNAME" with a portable variant
 - BUGFIX: fix opening panes under Windows
+- BUGFIX: workaround tmux statusline color issues under psmux on Windows
+- BUGFIX: fix regexp use in psmux color fallback
+- UPDATE: drop "--source winget" to avoid pinning to older package versions
 
 0.9.22 (2026-05-09)
 -------------------
