@@ -52,13 +52,9 @@ panes of the screen.
 
 ![screenshot](doc/screenshot-1.png)
 
-This is with LazyGit opened in a modal window:
+This is with LazyGit opened on top of Claude Code in a modal window:
 
 ![screenshot](doc/screenshot-2.png)
-
-This is with Bash opened in a modal window:
-
-![screenshot](doc/screenshot-3.png)
 
 Installation
 ------------
