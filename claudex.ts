@@ -797,12 +797,21 @@ const main = async (): Promise<void> => {
                 }
                 case "shell": {
                     if (process.platform === "win32") {
-                        ensureTool("powershell")
-                        return execInherit("powershell", [ "-NoLogo", "-NoProfile", ...argv ])
+                        const shell = process.env.SHELL ?? process.env.ComSpec ?? "powershell"
+                        const name = path.basename(shell).toLowerCase().replace(/\.exe$/, "")
+                        if (name === "powershell" || name === "pwsh") {
+                            ensureTool(name)
+                            return execInherit(name, [ "-NoLogo", "-NoProfile", ...argv ])
+                        }
+                        else {
+                            ensureTool(shell)
+                            return execInherit(shell, argv)
+                        }
                     }
                     else {
-                        ensureTool("bash")
-                        return execInherit("bash", [ "-l", ...argv ])
+                        const shell = process.env.SHELL ?? "bash"
+                        ensureTool(shell)
+                        return execInherit(shell, [ "-l", ...argv ])
                     }
                 }
                 case "ase-task-edit": {
