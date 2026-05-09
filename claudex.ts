@@ -526,14 +526,14 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
 /*  action: internal "tmux" -- spawn tmux with our generated configuration.
     The tmux.conf bind-keys for new claude panes embed the parent invocation's
     pass-through flags (e.g. "-R") so panes inherit the user's choice; flags
-    are transported via the CLAUDEX_FLAGS env var (set by actionDefault when
-    entering tmux mode).  */
+    are transported via the CLAUDEX_FLAGS_PASSTHROUGH env var (set by
+    actionDefault when entering tmux mode).  */
 const actionInternalTmux = (args: string[]): never => {
     ensureTool("tmux")
-    const claudexFlags = process.env.CLAUDEX_FLAGS ?? ""
+    const claudexFlags = process.env.CLAUDEX_FLAGS_PASSTHROUGH ?? ""
     const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
         .replace(/@SELFPATH@/g, selfPath)
-        .replace(/@CLAUDEX_FLAGS@/g, claudexFlags)
+        .replace(/@CLAUDEX_FLAGS_PASSTHROUGH@/g, claudexFlags)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
     const r = execaSync("tmux", [
@@ -735,7 +735,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         /*  propagate the chosen pass-through flags to "internal tmux" so its
             tmux.conf bind-keys spawn new claude panes with the same flags  */
         const claudexFlags = innerFlags.join(" ")
-        process.env.CLAUDEX_FLAGS = claudexFlags
+        process.env.CLAUDEX_FLAGS_PASSTHROUGH = claudexFlags
 
         /*  dispatch according to global options  */
         if (opts.capsula) {
@@ -748,14 +748,14 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 return execInherit("docker", [
                     "exec", "-i", "-t", container,
                     "bash", "-c",
-                    `TERM=${shq(TERM)} HOME=${shq(HOME)} CLAUDEX_FLAGS=${shq(claudexFlags)} sudo -E -u ${shq(USER)} ${shq(selfPath)} internal tmux new-session -A -s ${shq(session)}`
+                    `TERM=${shq(TERM)} HOME=${shq(HOME)} CLAUDEX_FLAGS_PASSTHROUGH=${shq(claudexFlags)} sudo -E -u ${shq(USER)} ${shq(selfPath)} internal tmux new-session -A -s ${shq(session)}`
                 ])
             }
             else {
                 /*  start a new container and run tmux  */
                 return execInherit(process.execPath, [
                     selfPathJS, "internal", "capsula",
-                    "-e", `CLAUDEX_FLAGS=${claudexFlags}`,
+                    "-e", `CLAUDEX_FLAGS_PASSTHROUGH=${claudexFlags}`,
                     "-C", container, selfPath, "internal", "tmux",
                     "new-session", "-A", "-s", session, "-n", "claude", inPane
                 ])
@@ -967,10 +967,9 @@ const main = async (): Promise<void> => {
         the top-level "-R"/"-C"/"-T"/"-A" flags by default. Merge env-derived
         flags with the command-line flags (env first, command-line second, so
         the user can extend or override on the command line). Skip for the
-        "internal" sub-dispatch, which inherits CLAUDEX_FLAGS through the
-        environment for its own purposes (e.g. tmux.conf bind-key flag
-        propagation), and skip flags that are already present on argv to
-        avoid duplicating boolean options.  */
+        "internal" sub-dispatch (which uses CLAUDEX_FLAGS_PASSTHROUGH for
+        tmux.conf bind-key flag propagation), and skip flags that are already
+        present on argv to avoid duplicating boolean options.  */
     {
         const topArgs = process.argv.slice(2)
         const subcmd = topArgs.find((a) => !a.startsWith("-")) ?? ""
