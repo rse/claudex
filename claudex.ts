@@ -564,7 +564,7 @@ const actionInternalTmux = (args: string[]): never => {
             "set-hook   -g -u after-split-window\n" +
             "bind-key g display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Version Control (lazygit) )▶\" claudex internal lazygit\n" +
             "bind-key s display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Shell )▶\"                     claudex internal shell\n" +
-            "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" +
+            "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n"
     }
     conf = conf.replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
