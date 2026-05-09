@@ -919,10 +919,10 @@ const actionHelp = (): never => {
     process.stdout.write(
         "\n" +
         "claudeX extension options (honored before claude):\n" +
-        "  -A, --ase            enable ASE-specific Claude Code statusline and ASE_* environment variables\n" +
         "  -C, --capsula        execute Claude Code inside a Capsula sandbox container\n" +
-        "  -R, --recolor        wrap Claude Code with ANSI recoloring for improved theming\n" +
         "  -T, --tmux [session] wrap Claude Code in a Tmux terminal multiplexing session (optional session name)\n" +
+        "  -R, --recolor        wrap Claude Code with ANSI recoloring for improved theming\n" +
+        "  -A, --ase            enable ASE-specific Claude Code statusline and ASE_* environment variables\n" +
         "\n" +
         "claudeX extension subcommands (honored before claude):\n" +
         "  install              install host-side or in-container dependencies\n" +
@@ -954,10 +954,10 @@ const main = async (): Promise<void> => {
         .passThroughOptions()
         .allowUnknownOption()
         .helpOption(false)
-        .option("-A, --ase",            "enable ASE-specific Claude Code statusline and ASE_* environment variables")
         .option("-C, --capsula",        "execute Claude Code inside a Capsula sandbox container")
-        .option("-R, --recolor",        "wrap Claude Code with ANSI recoloing for improved theming")
         .option("-T, --tmux [session]", "wrap Claude Code in a Tmux terminal multiplexing session (optional session name)")
+        .option("-R, --recolor",        "wrap Claude Code with ANSI recoloing for improved theming")
+        .option("-A, --ase",            "enable ASE-specific Claude Code statusline and ASE_* environment variables")
         .argument("[args...]",          "arguments passed unparsed to Claude Code")
         .action((args: string[], opts: TopOpts) => {
             actionDefault(opts, args)

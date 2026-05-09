@@ -64,23 +64,33 @@ Installation
 ------------
 
 ```sh
+# initially
 $ npm install -h @rse/claudex
-$ claudex install
+$ claudex [-C/--capsula] install
+
+# regularly
+$ claudex [-C/--capsula] update
 ```
 
 Usage
 -----
 
 ```sh
-$ claudex -T          # tmux session (formerly: claudex session)
-$ claudex             # plain claude (formerly: claudex naked)
-$ claudex -R          # claude wrapped with ansi-recolor
-$ claudex -C -T       # tmux session inside a Capsula sandbox
+$ claudex \
+    [-C|--capsula]         # execute Claude Code inside a Capsula sandbox container")
+    [-T|--tmux [session]], # wrap Claude Code in a Tmux terminal multiplexing session (optional session name)")
+    [-R|--recolor]         # wrap Claude Code with ANSI recoloing for improved theming")
+    [-A|--ase]             # enable ASE-specific Claude Code statusline and ASE_* environment variables")
+    [...options...]        # arbitrary Claude Code options
 ```
 
 See Also
 --------
 
+- [Claude Code](https://code.claude.com)
+- [Capsula](https://github.com/rse/capsula)
+- [Tmux](https://github.com/tmux/tmux)
+- [ANSI Recolor](https://github.com/rse/ansi-recolor)
 - [Agentic Software Engineering (ASE)](https://github.com/rse/ase)
 
 License
