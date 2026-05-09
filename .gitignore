@@ -2,4 +2,5 @@
 .ase
 tsc.tsbuildinfo
 node_modules
+package-lock.json
 claudex.js
