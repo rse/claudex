@@ -5,6 +5,9 @@ ChangeLog
 0.9.15 (2026-05-09)
 -------------------
 
+- CLEANUP: recolor lazygit only under global option -R, too
+- IMPROVEMENT: apply ANSI recoloring to `lazygit` only when global `-R` option is given
+
 0.9.14 (2026-05-09)
 -------------------
 

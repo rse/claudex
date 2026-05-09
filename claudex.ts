@@ -507,7 +507,7 @@ const actionInternalTmux = (args: string[]): never => {
     const claudexFlags = process.env.CLAUDEX_FLAGS ?? ""
     const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
         .replace(/@SELFPATH@/g, selfPath)
-        .replace(/@CLAUDEXFLAGS@/g, claudexFlags)
+        .replace(/@CLAUDEX_FLAGS@/g, claudexFlags)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
     const r = execaSync("tmux", [
@@ -562,18 +562,24 @@ const actionInternalAseTaskEdit = async (): Promise<void> => {
     }
 }
 
-/*  action: internal "lazygit" -- spawn lazygit (recolored)  */
-const actionInternalLazygit = (args: string[]): never => {
-    ensureTool("ansi-recolor")
+/*  action: internal "lazygit" -- spawn lazygit (optionally recolored)  */
+const actionInternalLazygit = (recolor: boolean, args: string[]): never => {
     ensureTool("git")
     ensureTool("lazygit")
     const env: Env = { ...process.env, TERM: "xterm-color" }
-    return execInherit("ansi-recolor", [
-        "-c", path.join(basedir, "ansi-recolor.conf"),
-        "-m",
-        "-n", "lazygit",
-        "-t", path.join(HOME, "ansi-recolor.txt"),
-        "lazygit", "-ucf", path.join(basedir, "lazygit.yaml"),
+    if (recolor) {
+        ensureTool("ansi-recolor")
+        return execInherit("ansi-recolor", [
+            "-c", path.join(basedir, "ansi-recolor.conf"),
+            "-m",
+            "-n", "lazygit",
+            "-t", path.join(HOME, "ansi-recolor.txt"),
+            "lazygit", "-ucf", path.join(basedir, "lazygit.yaml"),
+            ...args
+        ], { env })
+    }
+    return execInherit("lazygit", [
+        "-ucf", path.join(basedir, "lazygit.yaml"),
         ...args
     ], { env })
 }
@@ -654,14 +660,14 @@ const actionInternalCapsula = (args: string[]): never => {
 }
 
 /*  action: internal sub-dispatch (tmux, shell, ase-task-edit, lazygit, capsula)  */
-const actionInternal = async (args: string[]): Promise<void> => {
+const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
     const util = args[0]
     const rest = args.slice(1)
     switch (util) {
         case "tmux":          return actionInternalTmux(rest)
         case "shell":         return actionInternalShell(rest)
         case "ase-task-edit": return actionInternalAseTaskEdit()
-        case "lazygit":       return actionInternalLazygit(rest)
+        case "lazygit":       return actionInternalLazygit(opts.recolor === true, rest)
         case "capsula":       return actionInternalCapsula(rest)
         default:
             fatal(`invalid internal command "${util ?? ""}"`)
@@ -944,8 +950,9 @@ const main = async (): Promise<void> => {
         .helpOption("-h, --help", "display help for command")
         .allowUnknownOption()
         .argument("[args...]", "internal command name and its arguments")
-        .action(async (args: string[]) => {
-            await actionInternal(args)
+        .action(async (args: string[], _opts: object, cmd: Command) => {
+            const opts = (cmd.parent?.opts() ?? {}) as TopOpts
+            await actionInternal(opts, args)
         })
 
     await program.parseAsync(process.argv)
