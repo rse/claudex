@@ -35,7 +35,7 @@ const basedir = findBaseDir()
     next to the compiled JS, since the JS itself is not executable
     and embedded shell strings (docker/tmux) need a runnable command  */
 const selfPath   = path.join(basedir, "claudex")
-const selfPathJS = process.argv[1] ?? path.join(basedir, "claudex.js")
+const selfPathJS = path.join(basedir, "claudex.js")
 
 /*  helper for displaying info messages  */
 const info = (msg: string): void => {
