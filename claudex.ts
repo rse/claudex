@@ -795,9 +795,15 @@ const main = async (): Promise<void> => {
                     }
                     return process.exit(r.exitCode ?? 0)
                 }
-                case "bash": {
-                    ensureTool("bash")
-                    return execInherit("bash", [ "-l", ...argv ])
+                case "shell": {
+                    if (process.platform === "win32") {
+                        ensureTool("powershell")
+                        return execInherit("powershell", [ "-NoLogo", "-NoProfile", ...argv ])
+                    }
+                    else {
+                        ensureTool("bash")
+                        return execInherit("bash", [ "-l", ...argv ])
+                    }
                 }
                 case "ase-task-edit": {
                     ensureTool("ase")
