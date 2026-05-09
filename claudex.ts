@@ -310,7 +310,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         info("install Tmux")
         ensureTool("tmux", {
             hint: platform.match(/^windows:/) ?
-                "https://github.com/psmux/psmux" :
+                "https://github.com/psmux/psmux/" :
                 "https://github.com/tmux/tmux/",
             install: {
                 "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e psmux",
