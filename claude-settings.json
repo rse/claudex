@@ -15,5 +15,13 @@
     "teammateMode": "tmux",
     "preferences": {
         "tmuxSplitPanes": true
+    },
+    "spinnerTipsEnabled": false,
+    "spinnerVerbs": {
+        "mode": "replace",
+        "verbs": [
+            "Working",
+            "Working (Just be patient)"
+        ]
     }
 }
