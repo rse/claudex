@@ -180,7 +180,7 @@ const detectSessionName = (): string => {
             break
         dir = parent
     }
-    const session = path.basename(process.cwd())
+    const session = path.basename(process.cwd()) || "default"
     info(`no AGENTS.md/CLAUDE.md marker found; using cwd basename "${session}" as session name`)
     return session
 }
