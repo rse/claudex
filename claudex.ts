@@ -225,7 +225,7 @@ const detectActiveClaudeVersion = (binName: string): string | null => {
 type TopOpts = {
     capsula?: boolean,
     recolor?: boolean,
-    tmux?:    boolean
+    tmux?:    boolean | string
 }
 
 /*  action: install host-side or in-container dependencies  */
@@ -496,6 +496,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         }
     }
 }
+
 /*  action: internal "tmux" -- spawn tmux with our generated configuration.
     The tmux.conf bind-keys for new claude panes embed the parent invocation's
     pass-through flags (e.g. "-R") so panes inherit the user's choice; flags
@@ -566,7 +567,6 @@ const actionInternalLazygit = (args: string[]): never => {
     ensureTool("ansi-recolor")
     ensureTool("git")
     ensureTool("lazygit")
-    ensureTool("vim", { optional: true })
     const env: Env = { ...process.env, TERM: "xterm-color" }
     return execInherit("ansi-recolor", [
         "-c", path.join(basedir, "ansi-recolor.conf"),
@@ -676,23 +676,19 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
     if (opts.recolor)
         innerFlags.push("-R")
 
-    /*  branch: tmux mode (former "session" command)  */
+    /*  branch: tmux mode (with or without capsula)  */
     if (opts.tmux) {
         /*  sanity check environment  */
         if (ENVIRONMENT === "capsula")
             fatal("cannot execute tmux mode from within Capsula environment")
 
-        /*  determine session name (first non-flag arg, or auto-detected)  */
+        /*  determine session name (from "-T <name>" option value, or auto-detected)  */
         let session: string
-        let rest: string[]
-        if (args.length >= 1) {
-            session = args[0]
-            rest = args.slice(1)
-        }
-        else {
+        if (typeof opts.tmux === "string" && opts.tmux !== "")
+            session = opts.tmux
+        else
             session = detectSessionName()
-            rest = []
-        }
+        const rest = args
 
         /*  build the in-pane self-invocation shell string (recolor pass-through)  */
         const inPane = [ shq(selfPath), ...innerFlags.map(shq), ...rest.map(shq) ].join(" ")
@@ -702,6 +698,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         const claudexFlags = innerFlags.join(" ")
         process.env.CLAUDEX_FLAGS = claudexFlags
 
+        /*  dispatch according to global options  */
         if (opts.capsula) {
             /*  enter/start container, then run tmux inside it  */
             ensureTool("docker")
@@ -758,12 +755,12 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         }
     }
 
-    /*  branch: plain claude (former "naked") -- execute Claude Code, optionally
+    /*  branch: plain claude -- execute Claude Code, optionally
         wrapped with ansi-recolor when "-R" was given  */
     const recolor = opts.recolor === true
-    process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
     if (recolor)
         ensureTool("ansi-recolor")
+    process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
     ensureTool("claude")
     const env: Env = { ...process.env }
     const claudeModel = process.env.CLAUDE_MODEL ?? ""
@@ -844,6 +841,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         process.env.ASE_TERM_COLORS = `${colorMode}`
     }
 
+    /*  execute "claude"  */
     const settings = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8")
     const claudeBin = path.join(HOME, ".local/bin/claude")
     if (recolor) {
@@ -879,7 +877,7 @@ const actionHelp = (): never => {
         "claudeX extension options (honored before claude):\n" +
         "  -C, --capsula        execute Claude Code inside a Capsula sandbox container\n" +
         "  -R, --recolor        wrap Claude Code with ANSI recoloring for improved theming\n" +
-        "  -T, --tmux           wrap Claude Code in a Tmux terminal multiplexing session\n" +
+        "  -T, --tmux [session] wrap Claude Code in a Tmux terminal multiplexing session (optional session name)\n" +
         "\n" +
         "claudeX extension subcommands (honored before claude):\n" +
         "  install              install host-side or in-container dependencies\n" +
@@ -911,10 +909,10 @@ const main = async (): Promise<void> => {
         .passThroughOptions()
         .allowUnknownOption()
         .helpOption(false)
-        .option("-C, --capsula", "execute Claude Code inside a Capsula sandbox container")
-        .option("-R, --recolor", "wrap Claude Code with ansi-recolor for theming")
-        .option("-T, --tmux",    "wrap Claude Code in a tmux session (replaces former \"session\" command)")
-        .argument("[args...]",   "arguments passed unparsed to Claude Code")
+        .option("-C, --capsula",        "execute Claude Code inside a Capsula sandbox container")
+        .option("-R, --recolor",        "wrap Claude Code with ANSI recoloing for improved theming")
+        .option("-T, --tmux [session]", "wrap Claude Code in a Tmux terminal multiplexing session (optional session name)")
+        .argument("[args...]",          "arguments passed unparsed to Claude Code")
         .action((args: string[], opts: TopOpts) => {
             actionDefault(opts, args)
         })
