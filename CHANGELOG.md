@@ -6,6 +6,7 @@ ChangeLog
 -------------------
 
 - IMPROVEMENT: support CLAUDEX\_FLAGS env variable for passing default options
+- IMPROVEMENT: provide convenience keystrokes including CTRL+t for task switching
 - IMPROVEMENT: improve temp file cleanup approach for tmux config
 - BUGFIX: ensure docker container is really running
 - BUGFIX: fix typo
