@@ -5,6 +5,10 @@ ChangeLog
 0.9.24 (2026-05-10)
 -------------------
 
+- BUGFIX: further Windows workarounds related to tmux configuration
+- CLEANUP: make ESLint happy
+- REFACTOR: simplify `tmux.conf` patching by overwriting entries
+
 0.9.23 (2026-05-10)
 -------------------
 
