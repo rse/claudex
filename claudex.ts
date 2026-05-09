@@ -552,14 +552,15 @@ const actionInternalTmux = (args: string[]): never => {
     let conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
     conf = conf.replace(/@USER@/g, USER)
     if (isPsmux()) {
-        /*  psmux does not honor the reverse ANSI sequence in at least the statusline  */
+        /*  psmux does not honor the reverse ANSI sequence in at least the statusline
+            and no expansions at all in the pane border format  */
         conf = conf.replace(/fg=default,bg=default,reverse/, "bg=black,fg=color15")
             .replaceAll(/(status.*?)fg=blue,reverse/g, "$1bg=blue,fg=color15")
             .replaceAll(/(status.*?)fg=blue/g,         "$1bg=blue,fg=color15")
             .replaceAll(/(status.*?)fg=red/g,          "$1bg=red,fg=color15")
             .replaceAll(/(status.*?)fg=default/g,      "$1bg=black,fg=color15")
-            .replaceAll(/#\[reverse\]/g,               "#[bg=red,fg=color15]")
-            .replaceAll(/#\[noreverse\]/g,             "#[fg=red,bg=default]")
+            .replaceAll(/#\[reverse\]/g,               "")
+            .replaceAll(/#\[noreverse\]/g,             "")
     }
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
