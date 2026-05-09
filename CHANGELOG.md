@@ -7,6 +7,7 @@ ChangeLog
 
 - IMPROVEMENT: support CLAUDEX\_FLAGS env variable for passing default options
 - CLEANUP: internally, use CLAUDEX\_FLAGS\_PASSTHROUGH for the option passing
+- CLEANUP: always use "node claudex.js" internally for self-execution
 
 0.9.20 (2026-05-09)
 -------------------

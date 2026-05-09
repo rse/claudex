@@ -31,10 +31,7 @@ const findBaseDir = (): string => {
 }
 const basedir = findBaseDir()
 
-/*  the path used for self-invocation: always the POSIX-sh launcher
-    next to the compiled JS, since the JS itself is not executable
-    and embedded shell strings (docker/tmux) need a runnable command  */
-const selfPath   = path.join(basedir, "claudex")
+/*  the path used for self-invocation  */
 const selfPathJS = path.join(basedir, "claudex.js")
 
 /*  helper for displaying info messages  */
@@ -532,7 +529,7 @@ const actionInternalTmux = (args: string[]): never => {
     ensureTool("tmux")
     const claudexFlags = process.env.CLAUDEX_FLAGS_PASSTHROUGH ?? ""
     const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
-        .replace(/@SELFPATH@/g, selfPath)
+        .replace(/@CLAUDEX@/g, `${shq(process.execPath)} ${shq(selfPathJS)}`)
         .replace(/@CLAUDEX_FLAGS_PASSTHROUGH@/g, claudexFlags)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
@@ -748,7 +745,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 return execInherit("docker", [
                     "exec", "-i", "-t", container,
                     "bash", "-c",
-                    `TERM=${shq(TERM)} HOME=${shq(HOME)} CLAUDEX_FLAGS_PASSTHROUGH=${shq(claudexFlags)} sudo -E -u ${shq(USER)} ${shq(selfPath)} internal tmux new-session -A -s ${shq(session)}`
+                    `TERM=${shq(TERM)} HOME=${shq(HOME)} CLAUDEX_FLAGS_PASSTHROUGH=${shq(claudexFlags)} sudo -E -u ${shq(USER)} ${shq(process.execPath)} ${shq(selfPathJS)} internal tmux new-session -A -s ${shq(session)}`
                 ])
             }
             else {
@@ -756,7 +753,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 return execInherit(process.execPath, [
                     selfPathJS, "internal", "capsula",
                     "-e", `CLAUDEX_FLAGS_PASSTHROUGH=${claudexFlags}`,
-                    "-C", container, selfPath, "internal", "tmux",
+                    "-C", container, process.execPath, selfPathJS, "internal", "tmux",
                     "new-session", "-A", "-s", session, "-n", "claude", inPane
                 ])
             }
@@ -783,13 +780,13 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             return execInherit("docker", [
                 "exec", "-i", "-t", container,
                 "bash", "-c",
-                `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(selfPath)} ${passthru}`
+                `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(process.execPath)} ${shq(selfPathJS)} ${passthru}`
             ])
         }
         else {
             /*  start a new container and run claude  */
             return execInherit(process.execPath, [
-                selfPathJS, "internal", "capsula", "-C", container, selfPath, ...innerFlags, ...args
+                selfPathJS, "internal", "capsula", "-C", container, process.execPath, selfPathJS, ...innerFlags, ...args
             ])
         }
     }
