@@ -50,7 +50,9 @@ const fatal = (msg: string): never => {
 
 /*  helper for detecting the platform and package manager combination  */
 const detectPlatform = (): string => {
+    /*  helper function for finding a tool in PATH  */
     const has = (tool: string): boolean => which.sync(tool, { nothrow: true }) !== null
+
     /*  honor explicit override via CLAUDEX_PKG (e.g. "brew", "ports", "apt", ...)
         to disambiguate hosts where multiple package managers are installed  */
     const override = process.env.CLAUDEX_PKG ?? ""
