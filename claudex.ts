@@ -682,6 +682,9 @@ const main = async (): Promise<void> => {
                     remainder = remainder.slice(1)
                 const qIdx = remainder.indexOf("?")
                 const model = qIdx >= 0 ? remainder.slice(0, qIdx) : remainder
+                if (model === "")
+                    fatal("invalid CLAUDE_MODEL: missing model name in " +
+                        `"${claudeModel}" (expected: ollama:[//host[:port]]/<model>[?...])`)
                 let context = "200k"
                 let capabilities = ""
                 if (qIdx >= 0) {
