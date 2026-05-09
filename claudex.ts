@@ -724,8 +724,13 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             session = detectSessionName()
         const rest = args
 
-        /*  build the in-pane self-invocation shell string (recolor pass-through)  */
-        const inPane = [ shq(selfPath), ...innerFlags.map(shq), ...rest.map(shq) ].join(" ")
+        /*  build the in-pane self-invocation shell string  */
+        const inPane = [
+            shq(process.execPath),
+            shq(selfPathJS),
+            ...innerFlags.map(shq),
+            ...rest.map(shq)
+        ].join(" ")
 
         /*  propagate the chosen pass-through flags to "internal tmux" so its
             tmux.conf bind-keys spawn new claude panes with the same flags  */
