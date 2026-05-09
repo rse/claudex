@@ -5,8 +5,14 @@ ChangeLog
 0.9.15 (2026-05-09)
 -------------------
 
-- CLEANUP: recolor lazygit only under global option -R, too
+- FEATURE: add `-A`/`--ase` global option to make ASE features conditional
+- FEATURE: add `CHANGELOG.md` file
 - IMPROVEMENT: apply ANSI recoloring to `lazygit` only when global `-R` option is given
+- IMPROVEMENT: apply tmux-specific settings only under option `-T`
+- IMPROVEMENT: take over more useful settings from dotfiles
+- IMPROVEMENT: improve portability across platforms
+- UPDATE: switch license to GPL
+- CLEANUP: various code cleanups
 
 0.9.14 (2026-05-09)
 -------------------
