@@ -530,16 +530,14 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
 }
 
 /*  action: internal "tmux" -- spawn tmux with our generated configuration.
-    The tmux.conf bind-keys for new claude panes embed the parent invocation's
-    pass-through flags (e.g. "-R") so panes inherit the user's choice; flags
-    are transported via the CLAUDEX_FLAGS_PASSTHROUGH env var (set by
-    actionDefault when entering tmux mode).  */
+    The tmux.conf bind-keys for new claude panes invoke "claudex" (which is
+    expected to be in $PATH); the parent invocation's pass-through flags
+    (e.g. "-R") are propagated to those panes via the CLAUDEX_FLAGS env var
+    (set by actionDefault when entering tmux mode), which the env-merge in
+    main() picks up.  */
 const actionInternalTmux = (args: string[]): never => {
     ensureTool("tmux")
-    const claudexFlags = process.env.CLAUDEX_FLAGS_PASSTHROUGH ?? ""
     const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
-        .replace(/@CLAUDEX@/g, `${shQ.quote([ process.execPath, selfPathJS ])}`)
-        .replace(/@CLAUDEX_FLAGS_PASSTHROUGH@/g, claudexFlags)
         .replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
@@ -767,7 +765,9 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         /*  build the in-pane self-invocation  */
         const inPane = shQ.quote([ process.execPath, selfPathJS, ...innerFlags, ...rest ])
 
-        /*  propagate the chosen pass-through flags to "internal tmux"   */
+        /*  propagate the chosen pass-through flags to subsequent in-pane
+            "claudex" invocations via the CLAUDEX_FLAGS env var (honored by
+            the env-merge in main())  */
         const claudexFlags = innerFlags.join(" ")
 
         /*  dispatch according to global options  */
@@ -787,7 +787,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                     "bash", "-c",
                     `TERM=${shQ.quote([ TERM ])} ` +
                     `HOME=${shQ.quote([ HOME ])} ` +
-                    `CLAUDEX_FLAGS_PASSTHROUGH=${shQ.quote([ claudexFlags ])} ` +
+                    `CLAUDEX_FLAGS=${shQ.quote([ claudexFlags ])} ` +
                     `sudo -E -u ${shQ.quote([ USER ])} ` +
                     `${shQ.quote([ process.execPath, selfPathJS ])} ` +
                     `internal tmux new-session -A -s ${shQ.quote([ session ])}`
@@ -797,7 +797,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 /*  start a new container and run tmux  */
                 return execInherit(process.execPath, [
                     selfPathJS, "internal", "capsula",
-                    "-e", `CLAUDEX_FLAGS_PASSTHROUGH=${claudexFlags}`,
+                    "-e", `CLAUDEX_FLAGS=${claudexFlags}`,
                     "-e", `CLAUDEX_INTERNAL_EXEC=${inPane}`,
                     "-C", container, process.execPath, selfPathJS, "internal", "tmux",
                     "new-session", "-A", "-s", session, "-n", "claude",
@@ -814,7 +814,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 "claudex", "internal", "exec"
             ], {
                 env: {
-                    CLAUDEX_FLAGS_PASSTHROUGH: claudexFlags,
+                    CLAUDEX_FLAGS: claudexFlags,
                     CLAUDEX_INTERNAL_EXEC: inPane
                 }
             })

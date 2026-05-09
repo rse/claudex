@@ -6,6 +6,7 @@ ChangeLog
 -------------------
 
 - IMPROVEMENT: replace "echo $LOGNAME" with a portable variant
+- BUGFIX: fix opening panes under Windows
 
 0.9.22 (2026-05-09)
 -------------------
