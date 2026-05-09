@@ -12,6 +12,7 @@ import { execa, execaSync } from "execa"
 import which                from "which"
 import chalk                from "chalk"
 import deepmerge            from "deepmerge"
+import { Shescape }         from "shescape"
 import { Command }          from "commander"
 
 /*  type for environment variable map  */
@@ -170,11 +171,9 @@ const ensureTool = (tool: string | string[], options: {
     }
 }
 
-/*  helper to POSIX-single-quote-escape a string for safe interpolation
-    into a "bash -c" command line (defense against shell injection of
-    user-supplied or env-derived values)  */
-const shq = (s: string): string =>
-    `'${s.replace(/'/g, "'\\''")}'`
+/*  helper function to escape problematic shell characters  */
+const shescape = new Shescape({ shell: process.env.SHELL ?? true })
+const shq = (arg: string): string => shescape.quote(arg)
 
 /*  re-invoke this same script (mirrors "$0 ..." in Bash)  */
 const self = async (...args: string[]): Promise<number> => {
@@ -728,12 +727,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         const rest = args
 
         /*  build the in-pane self-invocation shell string  */
-        const inPane = [
-            shq(process.execPath),
-            shq(selfPathJS),
-            ...innerFlags.map(shq),
-            ...rest.map(shq)
-        ].join(" ")
+        const inPane = [ process.execPath, selfPathJS, ...innerFlags, ...rest ]
 
         /*  propagate the chosen pass-through flags to "internal tmux" so its
             tmux.conf bind-keys spawn new claude panes with the same flags  */
@@ -755,7 +749,12 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 return execInherit("docker", [
                     "exec", "-i", "-t", container,
                     "bash", "-c",
-                    `TERM=${shq(TERM)} HOME=${shq(HOME)} CLAUDEX_FLAGS_PASSTHROUGH=${shq(claudexFlags)} sudo -E -u ${shq(USER)} ${shq(process.execPath)} ${shq(selfPathJS)} internal tmux new-session -A -s ${shq(session)}`
+                    `TERM=${shq(TERM)} ` +
+                    `HOME=${shq(HOME)} ` +
+                    `CLAUDEX_FLAGS_PASSTHROUGH=${shq(claudexFlags)} ` +
+                    `sudo -E -u ${shq(USER)} ` +
+                    `${shq(process.execPath)} ${shq(selfPathJS)} ` +
+                    `internal tmux new-session -A -s ${shq(session)}`
                 ])
             }
             else {
@@ -764,14 +763,18 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                     selfPathJS, "internal", "capsula",
                     "-e", `CLAUDEX_FLAGS_PASSTHROUGH=${claudexFlags}`,
                     "-C", container, process.execPath, selfPathJS, "internal", "tmux",
-                    "new-session", "-A", "-s", session, "-n", "claude", inPane
+                    "new-session", "-A", "-s", session, "-n", "claude",
+                    ...inPane
                 ])
             }
         }
         else {
             /*  enter/start plain tmux  */
             return execInherit(process.execPath, [
-                selfPathJS, "internal", "tmux", "new-session", "-A", "-s", session, "-n", "claude", inPane
+                selfPathJS,
+                "internal", "tmux",
+                "new-session", "-A", "-s", session, "-n", "claude",
+                ...inPane
             ])
         }
     }
@@ -784,23 +787,30 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         const session = detectSessionName()
         const container = `capsula-${USER}-debian-claude-${session}`
         const inspect = execaSync("docker", [ "inspect", "-f", "{{.State.Running}}", container ], { reject: false })
+        const passthru = [ ...innerFlags, ...args ]
         if (inspect.exitCode === 0) {
             /*  start the container if it exists but is not running  */
             if (inspect.stdout.trim() !== "true")
                 execaSync("docker", [ "start", container ], { reject: false, stdio: "ignore" })
 
             /*  enter already running container and run claude (single-quote shell-escape)  */
-            const passthru = [ ...innerFlags, ...args ].map(shq).join(" ")
             return execInherit("docker", [
                 "exec", "-i", "-t", container,
                 "bash", "-c",
-                `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(process.execPath)} ${shq(selfPathJS)} ${passthru}`
+                `TERM=${shq(TERM)} ` +
+                `HOME=${shq(HOME)} ` +
+                `sudo -E -u ${shq(USER)} ` +
+                `${shq(process.execPath)} ${shq(selfPathJS)} ` +
+                `${passthru.map(shq).join(" ")}`
             ])
         }
         else {
             /*  start a new container and run claude  */
             return execInherit(process.execPath, [
-                selfPathJS, "internal", "capsula", "-C", container, process.execPath, selfPathJS, ...innerFlags, ...args
+                selfPathJS,
+                "internal", "capsula", "-C", container,
+                process.execPath, selfPathJS,
+                ...passthru
             ])
         }
     }
