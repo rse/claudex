@@ -76,9 +76,9 @@ Usage
 -----
 
 ```sh
-$ claudex \
+$ claudex
     [-C|--capsula]         # execute Claude Code inside a Capsula sandbox container")
-    [-T|--tmux [session]], # wrap Claude Code in a Tmux terminal multiplexing session (optional session name)")
+    [-T|--tmux [session]]  # wrap Claude Code in a Tmux terminal multiplexing session (optional session name)")
     [-R|--recolor]         # wrap Claude Code with ANSI recoloing for improved theming")
     [-A|--ase]             # enable ASE-specific Claude Code statusline and ASE_* environment variables")
     [...options...]        # arbitrary Claude Code options
