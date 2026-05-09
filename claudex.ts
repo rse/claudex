@@ -745,8 +745,12 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             /*  enter/start container, then run tmux inside it  */
             ensureTool("docker")
             const container = `capsula-${USER}-debian-claude-${session}`
-            const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
+            const inspect = execaSync("docker", [ "inspect", "-f", "{{.State.Running}}", container ], { reject: false })
             if (inspect.exitCode === 0) {
+                /*  start the container if it exists but is not running  */
+                if (inspect.stdout.trim() !== "true")
+                    execaSync("docker", [ "start", container ], { reject: false, stdio: "ignore" })
+
                 /*  enter already running container and run tmux  */
                 return execInherit("docker", [
                     "exec", "-i", "-t", container,
@@ -779,8 +783,12 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         ensureTool("docker")
         const session = detectSessionName()
         const container = `capsula-${USER}-debian-claude-${session}`
-        const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
+        const inspect = execaSync("docker", [ "inspect", "-f", "{{.State.Running}}", container ], { reject: false })
         if (inspect.exitCode === 0) {
+            /*  start the container if it exists but is not running  */
+            if (inspect.stdout.trim() !== "true")
+                execaSync("docker", [ "start", container ], { reject: false, stdio: "ignore" })
+
             /*  enter already running container and run claude (single-quote shell-escape)  */
             const passthru = [ ...innerFlags, ...args ].map(shq).join(" ")
             return execInherit("docker", [
