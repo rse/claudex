@@ -838,17 +838,11 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         }
         if (process.env.ASE_TERM_COLORS === undefined) {
             let colorMode = "none"
-            try {
-                const { stdout } = execaSync("tput", [ "colors" ], { reject: false })
-                const n = parseInt(stdout.trim(), 10)
-                if (!Number.isNaN(n) && n >= 256)
-                    colorMode = "ansi256"
-                else if (!Number.isNaN(n) && n >= 16)
-                    colorMode = "ansi16"
-            }
-            catch (_e) {
-                /*  ignore  */
-            }
+            const depth = process.stdout.getColorDepth()
+            if (depth >= 8)
+                colorMode = "ansi256"
+            else if (depth >= 4)
+                colorMode = "ansi16"
             process.env.ASE_TERM_COLORS = `${colorMode}`
         }
     }
