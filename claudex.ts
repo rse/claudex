@@ -213,6 +213,38 @@ const USER        = process.env.USER ?? ""
 const TERM        = process.env.TERM ?? ""
 const ENVIRONMENT = process.env.ENVIRONMENT ?? ""
 
+/*  helper: prune all but the given active Claude Code version  */
+const pruneClaudeVersions = (active: string | null): void => {
+    if (active === null)
+        return
+    const versionsDir = path.join(HOME, ".local/share/claude/versions")
+    if (!fs.existsSync(versionsDir))
+        return
+    for (const f of fs.readdirSync(versionsDir)) {
+        if (f === active)
+            continue
+        try {
+            fs.rmSync(path.join(versionsDir, f), { recursive: true, force: true })
+        }
+        catch (_e) {
+        }
+    }
+}
+
+/*  helper: detect the active Claude Code version via the installed binary  */
+const detectActiveClaudeVersion = (binName: string): string | null => {
+    try {
+        const r = execaSync(path.join(HOME, ".local/bin", binName), [ "--version" ], { reject: false })
+        const m = /^(\S+)/.exec(r.stdout ?? "")
+        if (m)
+            return m[1]
+    }
+    catch (_e) {
+        /*  binary missing or not executable  */
+    }
+    return null
+}
+
 /*  the main procedure  */
 const main = async (): Promise<void> => {
     /*  dispatch according to command  */
@@ -252,9 +284,16 @@ const main = async (): Promise<void> => {
                 await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "binutils", "gcc", "g++", "make")
 
                 info("install Claude Code")
-                await self("shell", "bash", "-c", "rm -f $HOME/.local/bin/claude")
-                await self("shell", "bash", "-c", "rm -f $HOME/.local/share/claude/versions/*")
                 await self("shell", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash`)
+
+                /*  prune obsolete versions only after successful install  */
+                await self("shell", "bash", "-c",
+                    "VERSIONS=\"$HOME/.local/share/claude/versions\"; " +
+                    "[ -d \"$VERSIONS\" ] || exit 0; " +
+                    "ACTIVE=$(\"$HOME/.local/bin/claude\" --version 2>/dev/null | awk '{print $1; exit}'); " +
+                    "[ -n \"$ACTIVE\" ] || exit 0; " +
+                    "find \"$VERSIONS\" -mindepth 1 -maxdepth 1 ! -name \"$ACTIVE\" -exec rm -rf {} +"
+                )
 
                 info("install ANSI-Recolor")
                 await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
@@ -345,36 +384,6 @@ const main = async (): Promise<void> => {
                 })
 
                 info("install Claude Code")
-                /*  helper: prune all but the given active Claude Code version  */
-                const pruneClaudeVersions = (active: string | null): void => {
-                    if (active === null)
-                        return
-                    const versionsDir = path.join(HOME, ".local/share/claude/versions")
-                    if (!fs.existsSync(versionsDir))
-                        return
-                    for (const f of fs.readdirSync(versionsDir)) {
-                        if (f === active)
-                            continue
-                        try {
-                            fs.rmSync(path.join(versionsDir, f), { recursive: true, force: true })
-                        }
-                        catch (_e) {
-                        }
-                    }
-                }
-                /*  helper: detect the active version via the installed binary  */
-                const detectActiveClaudeVersion = (binName: string): string | null => {
-                    try {
-                        const r = execaSync(path.join(HOME, ".local/bin", binName), [ "--version" ], { reject: false })
-                        const m = /^(\S+)/.exec(r.stdout ?? "")
-                        if (m)
-                            return m[1]
-                    }
-                    catch (_e) {
-                        /*  binary missing or not executable  */
-                    }
-                    return null
-                }
                 if (process.platform !== "win32") {
                     /*  run installation script  */
                     ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
@@ -496,6 +505,9 @@ const main = async (): Promise<void> => {
                     await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update` ], {
                         stdio: "inherit", reject: false
                     })
+
+                    /*  prune obsolete versions only after successful update  */
+                    pruneClaudeVersions(detectActiveClaudeVersion("claude"))
                 }
                 else {
                     if (!process.env.PSModulePath)
@@ -504,6 +516,9 @@ const main = async (): Promise<void> => {
                     await execa("powershell", [ "-NoProfile", "-Command", "claude update" ], {
                         stdio: "inherit", reject: false
                     })
+
+                    /*  prune obsolete versions only after successful update  */
+                    pruneClaudeVersions(detectActiveClaudeVersion("claude.exe"))
                 }
             }
             break
