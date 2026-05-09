@@ -757,17 +757,12 @@ const main = async (): Promise<void> => {
             switch (util) {
                 case "tmux": {
                     ensureTool("tmux")
+                    const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
+                        .replace(/@SELFPATH@/g, selfPath)
+                    const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
+                    fs.writeFileSync(confFile, conf, { mode: 0o600 })
                     return execInherit("tmux", [
-                        "-f", path.join(basedir, "tmux.conf"),
-                        "bind-key", "c",   "new-window",   "-c", "#{pane_current_path}", "-n", "claude", `${selfPath} claude`, ";",
-                        "bind-key", "|",   "split-window", "-c", "#{pane_current_path}", "-h",           `${selfPath} claude`, ";",
-                        "bind-key", "-",   "split-window", "-c", "#{pane_current_path}", "-v",           `${selfPath} claude`, ";",
-                        "bind-key", "g", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                        "-T", "─◀#[reverse] ⧉ Version Control (lazygit) #[noreverse]▶", `${selfPath} util lazygit`, ";",
-                        "bind-key", "b", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                        "-T", "─◀#[reverse] ⧉ Shell (bash) #[noreverse]▶",              `${selfPath} util bash`, ";",
-                        "bind-key", "q", "display-popup", "-E", "-w", "95%", "-h", "95%",
-                        "-T", "─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶", `${selfPath} util ase-task-edit`, ";",
+                        "-f", confFile,
                         ...argv
                     ])
                 }
