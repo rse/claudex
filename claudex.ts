@@ -48,11 +48,32 @@ const fatal = (msg: string): never => {
     process.exit(1)
 }
 
+/*  helper to locate a tool in $PATH (cross-platform).
+    On Windows, `which.sync` can fail to find App Execution Aliases
+    (zero-byte reparse-point stubs under %LOCALAPPDATA%\Microsoft\WindowsApps,
+    e.g. winget.exe, python.exe), because the `stat()` check inside the
+    `which` package may not classify them as regular files. As a fallback
+    we therefore also consult the native `where` command on Windows.  */
+const findTool = (tool: string): string | null => {
+    const r = which.sync(tool, { nothrow: true })
+    if (r !== null)
+        return r
+    if (process.platform === "win32") {
+        const r2 = execaSync("where", [ tool ], { reject: false, windowsHide: true })
+        if ((r2.exitCode ?? 1) === 0) {
+            const line = (r2.stdout ?? "").toString().split(/\r?\n/)[0].trim()
+            if (line !== "")
+                return line
+        }
+    }
+    return null
+}
+
 /*  helper for detecting the platform and package manager combination  */
 const detectPlatform = (): string => {
     /*  helper function for finding a tool in PATH  */
     const has = (tool: string): boolean =>
-        which.sync(tool, { nothrow: true }) !== null
+        findTool(tool) !== null
 
     /*  honor explicit override via CLAUDEX_PKG (e.g. "brew", "ports", "apt", ...)
         to disambiguate hosts where multiple package managers are installed  */
@@ -130,7 +151,7 @@ const ensureTool = (tool: string | string[], options: {
 } = {}): void => {
     const tools = typeof tool === "string" ? [ tool ] : tool
     for (const tool of tools) {
-        let r = which.sync(tool, { nothrow: true })
+        let r = findTool(tool)
         if (r === null && options.install) {
             const rc = executeCommand(options.install)
             if (rc !== 0) {
@@ -139,7 +160,7 @@ const ensureTool = (tool: string | string[], options: {
                 fatal(`failed to install required tool "${tool}" (exit ${rc})` +
                     (options.hint !== undefined ? ` -- hint: ${options.hint}` : ""))
             }
-            r = which.sync(tool, { nothrow: true })
+            r = findTool(tool)
         }
         if (r !== null)
             continue
