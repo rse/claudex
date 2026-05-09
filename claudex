@@ -19,5 +19,6 @@ while [ -L "$self" ]; do
 done
 basedir=$(cd "$(dirname "$self")" && pwd)
 
+#   pass-through execution
 exec node "$basedir/claudex.js" "$@"
 

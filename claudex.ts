@@ -11,6 +11,7 @@ import * as os              from "node:os"
 import { execa, execaSync } from "execa"
 import which                from "which"
 import chalk                from "chalk"
+import { Command }          from "commander"
 
 /*  type for environment variable map  */
 type Env = Record<string, string | undefined>
@@ -34,9 +35,6 @@ const basedir = findBaseDir()
     and embedded shell strings (docker/tmux) need a runnable command  */
 const selfPath   = path.join(basedir, "claudex")
 const selfPathJS = process.argv[1] ?? path.join(basedir, "claudex.js")
-
-/*  command line arguments (after node and script path)  */
-let argv = process.argv.slice(2)
 
 /*  helper for displaying info messages  */
 const info = (msg: string): void => {
@@ -185,28 +183,6 @@ const detectSessionName = (): string => {
     return session
 }
 
-/*  sanity check usage  */
-if (argv.length === 0) {
-    process.stderr.write("claudex: ERROR: missing command\n")
-    process.stderr.write("claudex: USAGE: claudex install\n")
-    process.stderr.write("claudex: USAGE: claudex update\n")
-    process.stderr.write("claudex: USAGE: claudex session\n")
-    process.stderr.write("claudex: USAGE: claudex shell [...]\n")
-    process.stderr.write("claudex: USAGE: claudex claude [...]\n")
-    process.exit(1)
-}
-
-/*  support special "-s" (sandbox) option  */
-let sandbox = false
-if (argv.length >= 1 && argv[0] === "-s") {
-    argv = argv.slice(1)
-    sandbox = true
-}
-
-/*  determine command  */
-const cmd = argv[0]
-argv = argv.slice(1)
-
 /*  determine information  */
 const HOME        = process.env.HOME ?? os.homedir()
 const USER        = process.env.USER ?? ""
@@ -245,612 +221,733 @@ const detectActiveClaudeVersion = (binName: string): string | null => {
     return null
 }
 
-/*  the main procedure  */
-const main = async (): Promise<void> => {
-    /*  dispatch according to command  */
-    switch (cmd) {
-        case "version": {
-            const ver = JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf8")).version
-            process.stdout.write(`claudeX ${ver}\n`)
+/*  options for the top-level command  */
+type TopOpts = {
+    capsula?: boolean,
+    recolor?: boolean,
+    tmux?:    boolean
+}
+
+/*  action: install host-side or in-container dependencies  */
+const actionInstall = async (capsula: boolean): Promise<void> => {
+    /*  sanity check environment  */
+    if (ENVIRONMENT === "capsula")
+        fatal("cannot execute \"install\" command from within Capsula environment")
+
+    /*  ensure we are not running from the home directory
+        in order to not read-write mount its ~/.local/!  */
+    try {
+        process.chdir(basedir)
+    }
+    catch (_e) {
+        fatal("cannot switch to base directory")
+    }
+
+    /*  dispatch according to host/container mode  */
+    if (capsula) {
+        info("update Debian GNU/Linux operating system")
+        await self("internal", "capsula", "sudo", "-E", "apt", "update", "-qq")
+        await self("internal", "capsula", "sudo", "-E", "apt", "upgrade", "-qq", "-y")
+
+        info("install Tmux / LazyGit / Git")
+        await self("internal", "capsula", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lazygit", "git")
+
+        info("install Node.js")
+        await self("internal", "capsula", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
+        await self("internal", "capsula", "sudo", "-E", "apt", "install", "-qq", "-y", "nodejs")
+        await self("internal", "capsula", "sudo", "-E", "apt", "install", "-qq", "-y", "binutils", "gcc", "g++", "make")
+
+        info("install Claude Code")
+        await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash`)
+
+        /*  prune obsolete versions only after successful install  */
+        await self("internal", "capsula", "bash", "-c",
+            "VERSIONS=\"$HOME/.local/share/claude/versions\"; " +
+            "[ -d \"$VERSIONS\" ] || exit 0; " +
+            "ACTIVE=$(\"$HOME/.local/bin/claude\" --version 2>/dev/null | awk '{print $1; exit}'); " +
+            "[ -n \"$ACTIVE\" ] || exit 0; " +
+            "find \"$VERSIONS\" -mindepth 1 -maxdepth 1 ! -name \"$ACTIVE\" -exec rm -rf {} +"
+        )
+
+        info("install ANSI-Recolor")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
+
+        info("install TypeScript LS")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+
+        info("install Claude wrapper")
+        await self("internal", "capsula", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
+    }
+    else {
+        const platform = detectPlatform()
+
+        info("install Tmux")
+        ensureTool("tmux", {
+            hint: platform.match(/^windows:/) ?
+                "https://github.com/psmux/psmux" :
+                "https://github.com/tmux/tmux/",
+            install: {
+                "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e psmux",
+                "windows:choco":  "choco install -y --accept-license --no-progress psmux",
+                "macos:ports":    "sudo port -N install tmux",
+                "macos:brew":     "sudo brew install tmux",
+                "linux:apt":      "sudo apt install -y tmux",
+                "linux:apk":      "sudo apk add --no-interactive tmux"
+            }
+        })
+
+        info("install LazyGit")
+        ensureTool("lazygit", {
+            optional: true,
+            hint: "https://github.com/jesseduffield/lazygit/",
+            install: {
+                "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
+                "windows:choco":  "choco install -y --accept-license --no-progress lazygit",
+                "macos:ports":    "sudo port -N install lazygit",
+                "macos:brew":     "sudo brew install lazygit",
+                "linux:apt":      "sudo apt install -y lazygit",
+                "linux:apk":      "sudo apk add --no-interactive lazygit"
+            }
+        })
+
+        info("install Git")
+        ensureTool("git", {
+            optional: true,
+            hint: "https://git-scm.com",
+            install: {
+                "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
+                "windows:choco":  "choco install -y --accept-license --no-progress git",
+                "macos:ports":    "sudo port -N install git",
+                "macos:brew":     "sudo brew install git",
+                "linux:apt":      "sudo apt install -y git",
+                "linux:apk":      "sudo apk add --no-interactive git"
+            }
+        })
+
+        info("install Node.js")
+        ensureTool([ "node", "npm" ], {
+            hint: "https://nodejs.org",
+            install: {
+                "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
+                "windows:choco":  "choco install -y --accept-license --no-progress nodejs",
+                "macos:ports":    "sudo port -N install nodejs24 npm11",
+                "macos:brew":     "sudo brew install node",
+                "linux:apt":      "curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - && sudo apt install -y nodejs",
+                "linux:apk":      "sudo apk add --no-interactive nodejs npm"
+            }
+        })
+
+        info("install ANSI-Recolor")
+        ensureTool("ansi-recolor", {
+            hint: "https://github.com/rse/ansi-recolor",
+            install: {
+                "windows:*": "npm install -g ansi-recolor",
+                "macos:*":   "sudo npm install -g ansi-recolor",
+                "linux:*":   "sudo npm install -g ansi-recolor"
+            }
+        })
+
+        info("install TypeScript-Language-Server")
+        ensureTool("typescript-language-server", {
+            hint: "https://github.com/typescript-language-server/typescript-language-server",
+            install: {
+                "windows:*": "npm install -g typescript-language-server",
+                "macos:*":   "sudo npm install -g typescript-language-server",
+                "linux:*":   "sudo npm install -g typescript-language-server"
+            }
+        })
+
+        info("install Claude Code")
+        if (process.platform !== "win32") {
+            /*  run installation script  */
+            ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
+            ensureTool("curl", { hint: "https://curl.se/" })
+            await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash` ], {
+                stdio: "inherit", reject: false
+            })
+
+            /*  prune obsolete versions only after successful install  */
+            pruneClaudeVersions(detectActiveClaudeVersion("claude"))
+        }
+        else {
+            if (!process.env.PSModulePath)
+                fatal("on Windows the \"install\" command has to be run from within a PowerShell session")
+
+            /*  run installation script  */
+            ensureTool("powershell")
+            await execa("powershell", [ "-NoProfile", "-Command", "irm https://claude.ai/install.ps1 | iex" ], {
+                stdio: "inherit", reject: false
+            })
+
+            /*  prune obsolete versions only after successful install  */
+            pruneClaudeVersions(detectActiveClaudeVersion("claude.exe"))
+        }
+    }
+}
+
+/*  action: update host-side or in-container components  */
+const actionUpdate = async (capsula: boolean): Promise<void> => {
+    /*  sanity check environment  */
+    if (ENVIRONMENT === "capsula")
+        fatal("cannot execute \"update\" command from within Capsula environment")
+
+    /*  ensure we are not running from the home directory
+        in order to not read-write mount its ~/.local/!  */
+    try {
+        process.chdir(basedir)
+    }
+    catch (_e) {
+        fatal("cannot switch to base directory")
+    }
+
+    /*  dispatch according to host/container mode  */
+    if (capsula) {
+        info("update Debian GNU/Linux operating system")
+        await self("internal", "capsula", "sudo", "apt", "update", "-qq")
+        await self("internal", "capsula", "sudo", "apt", "upgrade", "-qq", "-y")
+
+        info("update Claude Code")
+        await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update`)
+
+        info("update ANSI-Recolor")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
+
+        info("update TypeScript LS")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+
+        info("update Claude wrapper")
+        await self("internal", "capsula", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
+    }
+    else {
+        info("update Tmux")
+        executeCommand({
+            "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e psmux",
+            "windows:choco":  "choco upgrade -y --accept-license --no-progress psmux",
+            "macos:ports":    "sudo port -N upgrade tmux",
+            "macos:brew":     "sudo brew upgrade tmux",
+            "linux:apt":      "sudo apt install --only-upgrade -y tmux",
+            "linux:apk":      "sudo apk upgrade --no-interactive tmux"
+        })
+
+        info("update LazyGit")
+        executeCommand({
+            "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
+            "windows:choco":  "choco upgrade -y --accept-license --no-progress lazygit",
+            "macos:ports":    "sudo port -N upgrade lazygit",
+            "macos:brew":     "sudo brew upgrade lazygit",
+            "linux:apt":      "sudo apt install --only-upgrade -y lazygit",
+            "linux:apk":      "sudo apk upgrade --no-interactive lazygit"
+        })
+
+        info("update Git")
+        executeCommand({
+            "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
+            "windows:choco":  "choco upgrade -y --accept-license --no-progress git",
+            "macos:ports":    "sudo port -N upgrade git",
+            "macos:brew":     "sudo brew upgrade git",
+            "linux:apt":      "sudo apt install --only-upgrade -y git",
+            "linux:apk":      "sudo apk upgrade --no-interactive git"
+        })
+
+        info("update Node.js")
+        executeCommand({
+            "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
+            "windows:choco":  "choco upgrade -y --accept-license --no-progress nodejs",
+            "macos:ports":    "sudo port -N upgrade nodejs24 npm11",
+            "macos:brew":     "sudo brew upgrade node",
+            "linux:apt":      "sudo apt install --only-upgrade -y nodejs",
+            "linux:apk":      "sudo apk upgrade --no-interactive nodejs npm"
+        })
+
+        info("update ANSI-Recolor")
+        executeCommand({
+            "windows:*": "npm install -g ansi-recolor",
+            "macos:*":   "sudo npm install -g ansi-recolor",
+            "linux:*":   "sudo npm install -g ansi-recolor"
+        })
+
+        info("update TypeScript-Language-Server")
+        executeCommand({
+            "windows:*": "npm install -g typescript-language-server",
+            "macos:*":   "sudo npm install -g typescript-language-server",
+            "linux:*":   "sudo npm install -g typescript-language-server"
+        })
+
+        info("update Claude Code")
+        if (process.platform !== "win32") {
+            ensureTool("bash")
+            await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update` ], {
+                stdio: "inherit", reject: false
+            })
+
+            /*  prune obsolete versions only after successful update  */
+            pruneClaudeVersions(detectActiveClaudeVersion("claude"))
+        }
+        else {
+            if (!process.env.PSModulePath)
+                fatal("on Windows the \"update\" command has to be run from within a PowerShell session")
+            ensureTool("powershell")
+            await execa("powershell", [ "-NoProfile", "-Command", "claude update" ], {
+                stdio: "inherit", reject: false
+            })
+
+            /*  prune obsolete versions only after successful update  */
+            pruneClaudeVersions(detectActiveClaudeVersion("claude.exe"))
+        }
+    }
+}
+/*  action: internal "tmux" -- spawn tmux with our generated configuration.
+    The tmux.conf bind-keys for new claude panes embed the parent invocation's
+    pass-through flags (e.g. "-R") so panes inherit the user's choice; flags
+    are transported via the CLAUDEX_FLAGS env var (set by actionDefault when
+    entering tmux mode).  */
+const actionInternalTmux = (args: string[]): never => {
+    ensureTool("tmux")
+    const claudexFlags = process.env.CLAUDEX_FLAGS ?? ""
+    const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
+        .replace(/@SELFPATH@/g, selfPath)
+        .replace(/@CLAUDEXFLAGS@/g, claudexFlags)
+    const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
+    fs.writeFileSync(confFile, conf, { mode: 0o600 })
+    const r = execaSync("tmux", [
+        "-f", confFile,
+        ...args
+    ], {
+        stdio:        "inherit",
+        reject:       false,
+        windowsHide:  false
+    })
+    try {
+        fs.unlinkSync(confFile)
+    }
+    catch (_e) {
+        /*  ignore  */
+    }
+    return process.exit(r.exitCode ?? 0)
+}
+
+/*  action: internal "shell" -- spawn an interactive login shell  */
+const actionInternalShell = (args: string[]): never => {
+    if (process.platform === "win32") {
+        const shell = process.env.SHELL ?? process.env.ComSpec ?? "powershell"
+        const name = path.basename(shell).toLowerCase().replace(/\.exe$/, "")
+        if (name === "powershell" || name === "pwsh") {
+            ensureTool(name)
+            return execInherit(name, [ "-NoLogo", "-NoProfile", ...args ])
+        }
+        else {
+            ensureTool(shell)
+            return execInherit(shell, args)
+        }
+    }
+    else {
+        const shell = process.env.SHELL ?? "bash"
+        ensureTool(shell)
+        return execInherit(shell, [ "-l", ...args ])
+    }
+}
+
+/*  action: internal "ase-task-edit" -- edit the ASE task associated with the current tmux pane  */
+const actionInternalAseTaskEdit = async (): Promise<void> => {
+    ensureTool("ase")
+    let tid = ""
+    const r1 = execaSync("tmux", [ "display-message", "-p", "#{@ase_task_id}" ], { reject: false })
+    tid = (r1.stdout ?? "").trim()
+    if (tid !== "")
+        execInherit("ase", [ "task", "edit", tid ])
+    else {
+        process.stderr.write("no ASE task id known for this pane yet\n")
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+    }
+}
+
+/*  action: internal "lazygit" -- spawn lazygit (recolored)  */
+const actionInternalLazygit = (args: string[]): never => {
+    ensureTool("ansi-recolor")
+    ensureTool("git")
+    ensureTool("lazygit")
+    ensureTool("vim", { optional: true })
+    const env: Env = { ...process.env, TERM: "xterm-color" }
+    return execInherit("ansi-recolor", [
+        "-c", path.join(basedir, "ansi-recolor.conf"),
+        "-m",
+        "-n", "lazygit",
+        "-t", path.join(HOME, "ansi-recolor.txt"),
+        "lazygit", "-ucf", path.join(basedir, "lazygit.yaml"),
+        ...args
+    ], { env })
+}
+
+/*  action: internal "capsula" -- enter/start a Capsula container with the curated env-var/dotfile setup  */
+const actionInternalCapsula = (args: string[]): never => {
+    /*  sanity check environment  */
+    ensureTool("capsula")
+    if (ENVIRONMENT === "capsula")
+        fatal("cannot execute \"internal capsula\" command from within Capsula environment")
+
+    /*  define list of environment variables  */
+    const envs = [ "TERM", "HOME" ]
+    const envOpts: string[] = [ "-e", "!" ]
+    for (const e of envs)
+        envOpts.push("-e", e)
+
+    /*  find list of dot-files (relative to $HOME)  */
+    const dotfiles = [
+        ".inputrc",
+        ".dotfiles/inputrc",
+        ".bash_login",
+        ".bash_logout",
+        ".bashrc",
+        ".dotfiles/bashrc",
+        ".ssh/authorized_keys",
+        ".ssh/known_hosts!",
+        ".ssh/config",
+        ".dotfiles/sshconfig",
+        ".vimrc",
+        ".dotfiles/vimrc",
+        ".vim",
+        ".tmux.conf",
+        ".dotfiles/tmux.conf",
+        ".gitconfig",
+        ".dotfiles/gitconfig",
+        ".npmrc",
+        ".npm!",
+        ".cache!",
+        ".claude!",
+        ".claude.json!"
+    ]
+    const dotfileOpts: string[] = [ "-m", "!" ]
+    for (const dotfile of dotfiles) {
+        const p = dotfile.endsWith("!") ? dotfile.slice(0, -1) : dotfile
+        if (fs.existsSync(path.join(HOME, p)))
+            dotfileOpts.push("-m", dotfile)
+    }
+
+    /*  find all sensitive ".env" files from current working
+        directory up to root directory for hiding  */
+    const nullOpts: string[] = [ "-n", "!" ]
+    let dir = process.cwd()
+    while (true) {
+        const envFile = path.join(dir, ".env")
+        if (fs.existsSync(envFile) && fs.statSync(envFile).isFile())
+            nullOpts.push("-n", envFile)
+        const parent = path.dirname(dir)
+        if (parent === dir)
             break
+        dir = parent
+    }
+
+    /*  execute  */
+    return execInherit("capsula", [
+        "-c", "claude",
+        "-t", "debian",
+        "-P", "linux/arm64",
+        ...envOpts,
+        ...dotfileOpts,
+        ...nullOpts,
+        "-p", "!",
+        "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`,
+        "-e", `CLAUDEX=${basedir}`,
+        "-b", basedir,
+        ...args
+    ])
+}
+
+/*  action: internal sub-dispatch (tmux, shell, ase-task-edit, lazygit, capsula)  */
+const actionInternal = async (args: string[]): Promise<void> => {
+    const util = args[0]
+    const rest = args.slice(1)
+    switch (util) {
+        case "tmux":          return actionInternalTmux(rest)
+        case "shell":         return actionInternalShell(rest)
+        case "ase-task-edit": return actionInternalAseTaskEdit()
+        case "lazygit":       return actionInternalLazygit(rest)
+        case "capsula":       return actionInternalCapsula(rest)
+        default:
+            fatal(`invalid internal command "${util ?? ""}"`)
+    }
+}
+
+/*  action: top-level default -- run claude, optionally wrapped by tmux and/or capsula  */
+const actionDefault = (opts: TopOpts, args: string[]): never => {
+    /*  build the inner self-invocation flag list (pass-through "-R" only;
+        "-C" and "-T" are consumed at the outer layer to avoid recursion)  */
+    const innerFlags: string[] = []
+    if (opts.recolor)
+        innerFlags.push("-R")
+
+    /*  branch: tmux mode (former "session" command)  */
+    if (opts.tmux) {
+        /*  sanity check environment  */
+        if (ENVIRONMENT === "capsula")
+            fatal("cannot execute tmux mode from within Capsula environment")
+
+        /*  determine session name (first non-flag arg, or auto-detected)  */
+        let session: string
+        let rest: string[]
+        if (args.length >= 1) {
+            session = args[0]
+            rest = args.slice(1)
+        }
+        else {
+            session = detectSessionName()
+            rest = []
         }
 
-        case "install": {
-            /*  sanity check environment  */
-            if (ENVIRONMENT === "capsula")
-                fatal("cannot execute \"install\" command from within Capsula environment")
+        /*  build the in-pane self-invocation shell string (recolor pass-through)  */
+        const inPane = [ shq(selfPath), ...innerFlags.map(shq), ...rest.map(shq) ].join(" ")
 
-            /*  ensure we are not running from the home directory
-                in order to not read-write mount its ~/.local/!  */
-            try {
-                process.chdir(basedir)
-            }
-            catch (_e) {
-                fatal("cannot switch to base directory")
-            }
+        /*  propagate the chosen pass-through flags to "internal tmux" so its
+            tmux.conf bind-keys spawn new claude panes with the same flags  */
+        const claudexFlags = innerFlags.join(" ")
+        process.env.CLAUDEX_FLAGS = claudexFlags
 
-            /*  dispatch according to host/container mode  */
-            if (sandbox) {
-                info("update Debian GNU/Linux operating system")
-                await self("shell", "-s", "sudo", "-E", "apt", "update", "-qq")
-                await self("shell", "-s", "sudo", "-E", "apt", "upgrade", "-qq", "-y")
-
-                info("install Tmux / LazyGit / Git")
-                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lazygit", "git")
-
-                info("install Node.js")
-                await self("shell", "-s", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
-                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "nodejs")
-                await self("shell", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "binutils", "gcc", "g++", "make")
-
-                info("install Claude Code")
-                await self("shell", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash`)
-
-                /*  prune obsolete versions only after successful install  */
-                await self("shell", "bash", "-c",
-                    "VERSIONS=\"$HOME/.local/share/claude/versions\"; " +
-                    "[ -d \"$VERSIONS\" ] || exit 0; " +
-                    "ACTIVE=$(\"$HOME/.local/bin/claude\" --version 2>/dev/null | awk '{print $1; exit}'); " +
-                    "[ -n \"$ACTIVE\" ] || exit 0; " +
-                    "find \"$VERSIONS\" -mindepth 1 -maxdepth 1 ! -name \"$ACTIVE\" -exec rm -rf {} +"
-                )
-
-                info("install ANSI-Recolor")
-                await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
-
-                info("install TypeScript LS")
-                await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
-
-                info("install Claude wrapper")
-                await self("shell", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
+        if (opts.capsula) {
+            /*  enter/start container, then run tmux inside it  */
+            ensureTool("docker")
+            const container = `capsula-${USER}-debian-claude-${session}`
+            const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
+            if (inspect.exitCode === 0) {
+                /*  enter already running container and run tmux  */
+                return execInherit("docker", [
+                    "exec", "-i", "-t", container,
+                    "bash", "-c",
+                    `TERM=${shq(TERM)} HOME=${shq(HOME)} CLAUDEX_FLAGS=${shq(claudexFlags)} sudo -E -u ${shq(USER)} ${shq(selfPath)} internal tmux new-session -A -s ${shq(session)}`
+                ])
             }
             else {
-                const platform = detectPlatform()
-
-                info("install Tmux")
-                ensureTool("tmux", {
-                    hint: platform.match(/^windows:/) ?
-                        "https://github.com/psmux/psmux" :
-                        "https://github.com/tmux/tmux/",
-                    install: {
-                        "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e psmux",
-                        "windows:choco":  "choco install -y --accept-license --no-progress psmux",
-                        "macos:ports":    "sudo port -N install tmux",
-                        "macos:brew":     "sudo brew install tmux",
-                        "linux:apt":      "sudo apt install -y tmux",
-                        "linux:apk":      "sudo apk add --no-interactive tmux"
-                    }
-                })
-
-                info("install LazyGit")
-                ensureTool("lazygit", {
-                    optional: true,
-                    hint: "https://github.com/jesseduffield/lazygit/",
-                    install: {
-                        "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
-                        "windows:choco":  "choco install -y --accept-license --no-progress lazygit",
-                        "macos:ports":    "sudo port -N install lazygit",
-                        "macos:brew":     "sudo brew install lazygit",
-                        "linux:apt":      "sudo apt install -y lazygit",
-                        "linux:apk":      "sudo apk add --no-interactive lazygit"
-                    }
-                })
-
-                info("install Git")
-                ensureTool("git", {
-                    optional: true,
-                    hint: "https://git-scm.com",
-                    install: {
-                        "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
-                        "windows:choco":  "choco install -y --accept-license --no-progress git",
-                        "macos:ports":    "sudo port -N install git",
-                        "macos:brew":     "sudo brew install git",
-                        "linux:apt":      "sudo apt install -y git",
-                        "linux:apk":      "sudo apk add --no-interactive git"
-                    }
-                })
-
-                info("install Node.js")
-                ensureTool([ "node", "npm" ], {
-                    hint: "https://nodejs.org",
-                    install: {
-                        "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
-                        "windows:choco":  "choco install -y --accept-license --no-progress nodejs",
-                        "macos:ports":    "sudo port -N install nodejs24 npm11",
-                        "macos:brew":     "sudo brew install node",
-                        "linux:apt":      "curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - && sudo apt install -y nodejs",
-                        "linux:apk":      "sudo apk add --no-interactive nodejs npm"
-                    }
-                })
-
-                info("install ANSI-Recolor")
-                ensureTool("ansi-recolor", {
-                    hint: "https://github.com/rse/ansi-recolor",
-                    install: {
-                        "windows:*": "npm install -g ansi-recolor",
-                        "macos:*":   "sudo npm install -g ansi-recolor",
-                        "linux:*":   "sudo npm install -g ansi-recolor"
-                    }
-                })
-
-                info("install TypeScript-Language-Server")
-                ensureTool("typescript-language-server", {
-                    hint: "https://github.com/typescript-language-server/typescript-language-server",
-                    install: {
-                        "windows:*": "npm install -g typescript-language-server",
-                        "macos:*":   "sudo npm install -g typescript-language-server",
-                        "linux:*":   "sudo npm install -g typescript-language-server"
-                    }
-                })
-
-                info("install Claude Code")
-                if (process.platform !== "win32") {
-                    /*  run installation script  */
-                    ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
-                    ensureTool("curl", { hint: "https://curl.se/" })
-                    await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash` ], {
-                        stdio: "inherit", reject: false
-                    })
-
-                    /*  prune obsolete versions only after successful install  */
-                    pruneClaudeVersions(detectActiveClaudeVersion("claude"))
-                }
-                else {
-                    if (!process.env.PSModulePath)
-                        fatal("on Windows the \"install\" command has to be run from within a PowerShell session")
-
-                    /*  run installation script  */
-                    ensureTool("powershell")
-                    await execa("powershell", [ "-NoProfile", "-Command", "irm https://claude.ai/install.ps1 | iex" ], {
-                        stdio: "inherit", reject: false
-                    })
-
-                    /*  prune obsolete versions only after successful install  */
-                    pruneClaudeVersions(detectActiveClaudeVersion("claude.exe"))
-                }
-            }
-            break
-        }
-
-        case "update": {
-            /*  sanity check environment  */
-            if (ENVIRONMENT === "capsula")
-                fatal("cannot execute \"update\" command from within Capsula environment")
-
-            /*  ensure we are not running from the home directory
-                in order to not read-write mount its ~/.local/!  */
-            try {
-                process.chdir(basedir)
-            }
-            catch (_e) {
-                fatal("cannot switch to base directory")
-            }
-
-            /*  dispatch according to host/container mode  */
-            if (sandbox) {
-                info("update Debian GNU/Linux operating system")
-                await self("shell", "-s", "sudo", "apt", "update", "-qq")
-                await self("shell", "-s", "sudo", "apt", "upgrade", "-qq", "-y")
-
-                info("update Claude Code")
-                await self("shell", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update`)
-
-                info("update ANSI-Recolor")
-                await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
-
-                info("update TypeScript LS")
-                await self("shell", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
-
-                info("update Claude wrapper")
-                await self("shell", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
-            }
-            else {
-                info("update Tmux")
-                executeCommand({
-                    "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e psmux",
-                    "windows:choco":  "choco upgrade -y --accept-license --no-progress psmux",
-                    "macos:ports":    "sudo port -N upgrade tmux",
-                    "macos:brew":     "sudo brew upgrade tmux",
-                    "linux:apt":      "sudo apt install --only-upgrade -y tmux",
-                    "linux:apk":      "sudo apk upgrade --no-interactive tmux"
-                })
-
-                info("update LazyGit")
-                executeCommand({
-                    "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
-                    "windows:choco":  "choco upgrade -y --accept-license --no-progress lazygit",
-                    "macos:ports":    "sudo port -N upgrade lazygit",
-                    "macos:brew":     "sudo brew upgrade lazygit",
-                    "linux:apt":      "sudo apt install --only-upgrade -y lazygit",
-                    "linux:apk":      "sudo apk upgrade --no-interactive lazygit"
-                })
-
-                info("update Git")
-                executeCommand({
-                    "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
-                    "windows:choco":  "choco upgrade -y --accept-license --no-progress git",
-                    "macos:ports":    "sudo port -N upgrade git",
-                    "macos:brew":     "sudo brew upgrade git",
-                    "linux:apt":      "sudo apt install --only-upgrade -y git",
-                    "linux:apk":      "sudo apk upgrade --no-interactive git"
-                })
-
-                info("update Node.js")
-                executeCommand({
-                    "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
-                    "windows:choco":  "choco upgrade -y --accept-license --no-progress nodejs",
-                    "macos:ports":    "sudo port -N upgrade nodejs24 npm11",
-                    "macos:brew":     "sudo brew upgrade node",
-                    "linux:apt":      "sudo apt install --only-upgrade -y nodejs",
-                    "linux:apk":      "sudo apk upgrade --no-interactive nodejs npm"
-                })
-
-                info("update ANSI-Recolor")
-                executeCommand({
-                    "windows:*": "npm install -g ansi-recolor",
-                    "macos:*":   "sudo npm install -g ansi-recolor",
-                    "linux:*":   "sudo npm install -g ansi-recolor"
-                })
-
-                info("update TypeScript-Language-Server")
-                executeCommand({
-                    "windows:*": "npm install -g typescript-language-server",
-                    "macos:*":   "sudo npm install -g typescript-language-server",
-                    "linux:*":   "sudo npm install -g typescript-language-server"
-                })
-
-                info("update Claude Code")
-                if (process.platform !== "win32") {
-                    ensureTool("bash")
-                    await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update` ], {
-                        stdio: "inherit", reject: false
-                    })
-
-                    /*  prune obsolete versions only after successful update  */
-                    pruneClaudeVersions(detectActiveClaudeVersion("claude"))
-                }
-                else {
-                    if (!process.env.PSModulePath)
-                        fatal("on Windows the \"update\" command has to be run from within a PowerShell session")
-                    ensureTool("powershell")
-                    await execa("powershell", [ "-NoProfile", "-Command", "claude update" ], {
-                        stdio: "inherit", reject: false
-                    })
-
-                    /*  prune obsolete versions only after successful update  */
-                    pruneClaudeVersions(detectActiveClaudeVersion("claude.exe"))
-                }
-            }
-            break
-        }
-
-        case "session": {
-            /*  sanity check environment  */
-            if (ENVIRONMENT === "capsula")
-                fatal("cannot execute \"session\" command from within Capsula environment")
-
-            /*  determine session name  */
-            let session = "default"
-            if (argv.length >= 1) {
-                session = argv[0]
-                argv = argv.slice(1)
-            }
-            else
-                session = detectSessionName()
-
-            /*  dispatch according to environment  */
-            if (sandbox) {
-                /*  enter/start container  */
-                ensureTool("docker")
-                const container = `capsula-${USER}-debian-claude-${session}`
-                const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
-                if (inspect.exitCode === 0) {
-                    /*  enter already running container and run tmux  */
-                    return execInherit("docker", [
-                        "exec", "-i", "-t", container,
-                        "bash", "-c",
-                        `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(selfPath)} util tmux new-session -A -s ${shq(session)}`
-                    ])
-                }
-                else {
-                    /*  start a new container and run tmux  */
-                    return execInherit(process.execPath, [
-                        selfPathJS, "shell", "-C", container, selfPath, "util", "tmux",
-                        "new-session", "-A", "-s", session, "-n", "claude", selfPath + " claude"
-                    ])
-                }
-            }
-            else {
-                /*  enter/start plain tmux  */
-                return execInherit(selfPath, [ "util", "tmux", "new-session", "-A", "-s", session, "-n", "claude", `${shq(selfPath)} claude` ])
+                /*  start a new container and run tmux  */
+                return execInherit(process.execPath, [
+                    selfPathJS, "internal", "capsula",
+                    "-e", `CLAUDEX_FLAGS=${claudexFlags}`,
+                    "-C", container, selfPath, "internal", "tmux",
+                    "new-session", "-A", "-s", session, "-n", "claude", inPane
+                ])
             }
         }
-
-        case "naked": {
-            /*  sanity check environment  */
-            if (ENVIRONMENT === "capsula")
-                fatal("cannot execute \"naked\" command from within Capsula environment")
-
-            /*  dispatch according to environment  */
-            if (sandbox) {
-                ensureTool("docker")
-                const session = detectSessionName()
-                const container = `capsula-${USER}-debian-claude-${session}`
-                const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
-                if (inspect.exitCode === 0) {
-                    /*  enter already running container and run claude (single-quote shell-escape)  */
-                    const passthru = argv.map(shq).join(" ")
-                    return execInherit("docker", [
-                        "exec", "-i", "-t", container,
-                        "bash", "-c",
-                        `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(selfPath)} claude ${passthru}`
-                    ])
-                }
-                else {
-                    /*  start a new container and run claude  */
-                    return execInherit(process.execPath, [
-                        selfPathJS, "shell", "-C", container, selfPath, "claude", ...argv
-                    ])
-                }
-            }
-            else {
-                /*  enter/start plain claude  */
-                return execInherit(selfPath, [ "claude", ...argv ])
-            }
-        }
-
-        case "shell": {
-            /*  sanity check environment  */
-            ensureTool("capsula")
-            if (ENVIRONMENT === "capsula")
-                fatal("cannot execute \"shell\" command from within Capsula environment")
-
-            /*  define list of environment variables  */
-            const envs = [ "TERM", "HOME" ]
-            const envOpts: string[] = [ "-e", "!" ]
-            for (const e of envs)
-                envOpts.push("-e", e)
-
-            /*  find list of dot-files (relative to $HOME)  */
-            const dotfiles = [
-                ".inputrc",
-                ".dotfiles/inputrc",
-                ".bash_login",
-                ".bash_logout",
-                ".bashrc",
-                ".dotfiles/bashrc",
-                ".ssh/authorized_keys",
-                ".ssh/known_hosts!",
-                ".ssh/config",
-                ".dotfiles/sshconfig",
-                ".vimrc",
-                ".dotfiles/vimrc",
-                ".vim",
-                ".tmux.conf",
-                ".dotfiles/tmux.conf",
-                ".gitconfig",
-                ".dotfiles/gitconfig",
-                ".npmrc",
-                ".npm!",
-                ".cache!",
-                ".claude!",
-                ".claude.json!"
-            ]
-            const dotfileOpts: string[] = [ "-m", "!" ]
-            for (const dotfile of dotfiles) {
-                const p = dotfile.endsWith("!") ? dotfile.slice(0, -1) : dotfile
-                if (fs.existsSync(path.join(HOME, p)))
-                    dotfileOpts.push("-m", dotfile)
-            }
-
-            /*  find all sensitive ".env" files from current working
-                directory up to root directory for hiding  */
-            const nullOpts: string[] = [ "-n", "!" ]
-            let dir = process.cwd()
-            while (true) {
-                const envFile = path.join(dir, ".env")
-                if (fs.existsSync(envFile) && fs.statSync(envFile).isFile())
-                    nullOpts.push("-n", envFile)
-                const parent = path.dirname(dir)
-                if (parent === dir)
-                    break
-                dir = parent
-            }
-
-            /*  execute  */
-            return execInherit("capsula", [
-                "-c", "claude",
-                "-t", "debian",
-                "-P", "linux/arm64",
-                ...envOpts,
-                ...dotfileOpts,
-                ...nullOpts,
-                "-p", "!",
-                "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`,
-                "-e", `CLAUDEX=${basedir}`,
-                "-b", basedir,
-                ...argv
+        else {
+            /*  enter/start plain tmux  */
+            return execInherit(selfPath, [
+                "internal", "tmux", "new-session", "-A", "-s", session, "-n", "claude", inPane
             ])
         }
-
-        case "claude": {
-            /*  execute Claude Code  */
-            process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
-            ensureTool("ansi-recolor")
-            ensureTool("claude")
-            const env: Env = { ...process.env }
-            const claudeModel = process.env.CLAUDE_MODEL ?? ""
-            if (/^ollama:/.test(claudeModel)) {
-                /*  parse ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]  */
-                let remainder = claudeModel.slice("ollama:".length)
-                let ohost = "localhost:11434"
-                if (remainder.startsWith("//")) {
-                    remainder = remainder.slice(2)
-                    const slash = remainder.indexOf("/")
-                    if (slash >= 0) {
-                        ohost = remainder.slice(0, slash)
-                        remainder = remainder.slice(slash + 1)
-                    }
-                    else {
-                        ohost = remainder
-                        remainder = ""
-                    }
-                }
-                else if (remainder.startsWith("/"))
-                    remainder = remainder.slice(1)
-                const qIdx = remainder.indexOf("?")
-                const model = qIdx >= 0 ? remainder.slice(0, qIdx) : remainder
-                if (model === "")
-                    fatal("invalid CLAUDE_MODEL: missing model name in " +
-                        `"${claudeModel}" (expected: ollama:[//host[:port]]/<model>[?...])`)
-                let context = "200k"
-                let capabilities = ""
-                if (qIdx >= 0) {
-                    const query = remainder.slice(qIdx + 1)
-                    for (const pair of query.split(",")) {
-                        const eq = pair.indexOf("=")
-                        const key = eq >= 0 ? pair.slice(0, eq) : pair
-                        const val = eq >= 0 ? pair.slice(eq + 1) : ""
-                        if (key === "context")           context      = val
-                        else if (key === "capabilities") capabilities = val
-                    }
-                }
-
-                /*  override Claude Code configuration  */
-                env.ANTHROPIC_API_KEY                = ""
-                env.ANTHROPIC_AUTH_TOKEN             = "ollama"
-                env.ANTHROPIC_BASE_URL               = `http://${ohost}`
-                env.ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES = capabilities
-                env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
-                env.ANTHROPIC_DEFAULT_OPUS_MODEL     = model
-                env.ANTHROPIC_DEFAULT_SONNET_MODEL   = model
-                env.CLAUDE_CODE_ATTRIBUTION_HEADER   = "0"
-                env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
-                env.CLAUDE_CODE_SUBAGENT_MODEL       = model
-                env.DISABLE_LOGIN_COMMAND            = "1"
-                env.DISABLE_LOGOUT_COMMAND           = "1"
-            }
-
-            /*  override ASE configuration (for its diagram rendering)  */
-            if (process.env.ASE_TERM_WIDTH === undefined) {
-                let width = 0
-                if (process.stdout.isTTY) {
-                    const cols = process.stdout.columns
-                    if (typeof cols === "number" && cols > 0)
-                        width = cols
-                }
-                process.env.ASE_TERM_WIDTH = `${width}`
-            }
-            if (process.env.ASE_TERM_COLORS === undefined) {
-                let colorMode = "none"
-                try {
-                    const { stdout } = execaSync("tput", [ "colors" ], { reject: false })
-                    const n = parseInt(stdout.trim(), 10)
-                    if (!Number.isNaN(n) && n >= 256)
-                        colorMode = "ansi256"
-                    else if (!Number.isNaN(n) && n >= 16)
-                        colorMode = "ansi16"
-                }
-                catch (_e) {
-                    /*  ignore  */
-                }
-                process.env.ASE_TERM_COLORS = `${colorMode}`
-            }
-
-            const settings = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8")
-            return execInherit("ansi-recolor", [
-                "-c", path.join(basedir, "ansi-recolor.conf"),
-                "-m",
-                "-n", "claude",
-                "-t", path.join(HOME, "ansi-recolor.txt"),
-                path.join(HOME, ".local/bin/claude"),
-                "--settings", settings,
-                ...argv
-            ], { env })
-        }
-
-        case "util": {
-            const util = argv[0]
-            argv = argv.slice(1)
-            switch (util) {
-                case "tmux": {
-                    ensureTool("tmux")
-                    const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
-                        .replace(/@SELFPATH@/g, selfPath)
-                    const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
-                    fs.writeFileSync(confFile, conf, { mode: 0o600 })
-                    const r = execaSync("tmux", [
-                        "-f", confFile,
-                        ...argv
-                    ], {
-                        stdio:        "inherit",
-                        reject:       false,
-                        windowsHide:  false
-                    })
-                    try {
-                        fs.unlinkSync(confFile)
-                    }
-                    catch (_e) {
-                        /*  ignore  */
-                    }
-                    return process.exit(r.exitCode ?? 0)
-                }
-                case "shell": {
-                    if (process.platform === "win32") {
-                        const shell = process.env.SHELL ?? process.env.ComSpec ?? "powershell"
-                        const name = path.basename(shell).toLowerCase().replace(/\.exe$/, "")
-                        if (name === "powershell" || name === "pwsh") {
-                            ensureTool(name)
-                            return execInherit(name, [ "-NoLogo", "-NoProfile", ...argv ])
-                        }
-                        else {
-                            ensureTool(shell)
-                            return execInherit(shell, argv)
-                        }
-                    }
-                    else {
-                        const shell = process.env.SHELL ?? "bash"
-                        ensureTool(shell)
-                        return execInherit(shell, [ "-l", ...argv ])
-                    }
-                }
-                case "ase-task-edit": {
-                    ensureTool("ase")
-                    let tid = ""
-                    const r1 = execaSync("tmux", [ "display-message", "-p", "#{@ase_task_id}" ], { reject: false })
-                    tid = (r1.stdout ?? "").trim()
-                    if (tid !== "")
-                        execInherit("ase", [ "task", "edit", tid ])
-                    else {
-                        process.stderr.write("no ASE task id known for this pane yet\n")
-                        await new Promise((resolve) => setTimeout(resolve, 2000))
-                    }
-                    break
-                }
-                case "lazygit": {
-                    ensureTool("ansi-recolor")
-                    ensureTool("git")
-                    ensureTool("lazygit")
-                    ensureTool("vim", { optional: true })
-                    const env: Env = { ...process.env, TERM: "xterm-color" }
-                    return execInherit("ansi-recolor", [
-                        "-c", path.join(basedir, "ansi-recolor.conf"),
-                        "-m",
-                        "-n", "lazygit",
-                        "-t", path.join(HOME, "ansi-recolor.txt"),
-                        "lazygit", "-ucf", path.join(basedir, "lazygit.yaml"),
-                        ...argv
-                    ], { env })
-                }
-                default:
-                    fatal(`invalid util "${util ?? ""}"`)
-            }
-            break
-        }
-
-        default:
-            fatal(`invalid command "${cmd}"`)
     }
+
+    /*  branch: capsula-only mode  */
+    if (opts.capsula) {
+        if (ENVIRONMENT === "capsula")
+            fatal("cannot execute capsula mode from within Capsula environment")
+        ensureTool("docker")
+        const session = detectSessionName()
+        const container = `capsula-${USER}-debian-claude-${session}`
+        const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
+        if (inspect.exitCode === 0) {
+            /*  enter already running container and run claude (single-quote shell-escape)  */
+            const passthru = [ ...innerFlags, ...args ].map(shq).join(" ")
+            return execInherit("docker", [
+                "exec", "-i", "-t", container,
+                "bash", "-c",
+                `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(selfPath)} ${passthru}`
+            ])
+        }
+        else {
+            /*  start a new container and run claude  */
+            return execInherit(process.execPath, [
+                selfPathJS, "internal", "capsula", "-C", container, selfPath, ...innerFlags, ...args
+            ])
+        }
+    }
+
+    /*  branch: plain claude (former "naked") -- execute Claude Code, optionally
+        wrapped with ansi-recolor when "-R" was given  */
+    const recolor = opts.recolor === true
+    process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
+    if (recolor)
+        ensureTool("ansi-recolor")
+    ensureTool("claude")
+    const env: Env = { ...process.env }
+    const claudeModel = process.env.CLAUDE_MODEL ?? ""
+    if (/^ollama:/.test(claudeModel)) {
+        /*  parse ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]  */
+        let remainder = claudeModel.slice("ollama:".length)
+        let ohost = "localhost:11434"
+        if (remainder.startsWith("//")) {
+            remainder = remainder.slice(2)
+            const slash = remainder.indexOf("/")
+            if (slash >= 0) {
+                ohost = remainder.slice(0, slash)
+                remainder = remainder.slice(slash + 1)
+            }
+            else {
+                ohost = remainder
+                remainder = ""
+            }
+        }
+        else if (remainder.startsWith("/"))
+            remainder = remainder.slice(1)
+        const qIdx = remainder.indexOf("?")
+        const model = qIdx >= 0 ? remainder.slice(0, qIdx) : remainder
+        if (model === "")
+            fatal("invalid CLAUDE_MODEL: missing model name in " +
+                `"${claudeModel}" (expected: ollama:[//host[:port]]/<model>[?...])`)
+        let context = "200k"
+        let capabilities = ""
+        if (qIdx >= 0) {
+            const query = remainder.slice(qIdx + 1)
+            for (const pair of query.split(",")) {
+                const eq = pair.indexOf("=")
+                const key = eq >= 0 ? pair.slice(0, eq) : pair
+                const val = eq >= 0 ? pair.slice(eq + 1) : ""
+                if (key === "context")           context      = val
+                else if (key === "capabilities") capabilities = val
+            }
+        }
+
+        /*  override Claude Code configuration  */
+        env.ANTHROPIC_API_KEY                = ""
+        env.ANTHROPIC_AUTH_TOKEN             = "ollama"
+        env.ANTHROPIC_BASE_URL               = `http://${ohost}`
+        env.ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES = capabilities
+        env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
+        env.ANTHROPIC_DEFAULT_OPUS_MODEL     = model
+        env.ANTHROPIC_DEFAULT_SONNET_MODEL   = model
+        env.CLAUDE_CODE_ATTRIBUTION_HEADER   = "0"
+        env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
+        env.CLAUDE_CODE_SUBAGENT_MODEL       = model
+        env.DISABLE_LOGIN_COMMAND            = "1"
+        env.DISABLE_LOGOUT_COMMAND           = "1"
+    }
+
+    /*  override ASE configuration (for its diagram rendering)  */
+    if (process.env.ASE_TERM_WIDTH === undefined) {
+        let width = 0
+        if (process.stdout.isTTY) {
+            const cols = process.stdout.columns
+            if (typeof cols === "number" && cols > 0)
+                width = cols
+        }
+        process.env.ASE_TERM_WIDTH = `${width}`
+    }
+    if (process.env.ASE_TERM_COLORS === undefined) {
+        let colorMode = "none"
+        try {
+            const { stdout } = execaSync("tput", [ "colors" ], { reject: false })
+            const n = parseInt(stdout.trim(), 10)
+            if (!Number.isNaN(n) && n >= 256)
+                colorMode = "ansi256"
+            else if (!Number.isNaN(n) && n >= 16)
+                colorMode = "ansi16"
+        }
+        catch (_e) {
+            /*  ignore  */
+        }
+        process.env.ASE_TERM_COLORS = `${colorMode}`
+    }
+
+    const settings = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8")
+    const claudeBin = path.join(HOME, ".local/bin/claude")
+    if (recolor) {
+        return execInherit("ansi-recolor", [
+            "-c", path.join(basedir, "ansi-recolor.conf"),
+            "-m",
+            "-n", "claude",
+            "-t", path.join(HOME, "ansi-recolor.txt"),
+            claudeBin,
+            "--settings", settings,
+            ...args
+        ], { env })
+    }
+    else {
+        return execInherit(claudeBin, [
+            "--settings", settings,
+            ...args
+        ], { env })
+    }
+}
+
+/*  action: top-level "-h/--help" -- run "claude --help" and append our extension info  */
+const actionHelp = (): never => {
+    process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
+    ensureTool("claude")
+    const claudeBin = path.join(HOME, ".local/bin/claude")
+    const r = execaSync(claudeBin, [ "--help" ], { reject: false, stdio: [ "ignore", "pipe", "inherit" ] })
+    process.stdout.write(r.stdout ?? "")
+    process.stdout.write(
+        "\n" +
+        "\n" +
+        "claudeX extension options (honored before claude):\n" +
+        "  -C, --capsula  execute Claude Code inside a Capsula sandbox container\n" +
+        "  -R, --recolor  wrap Claude Code with ansi-recolor for theming\n" +
+        "  -T, --tmux     wrap Claude Code in a tmux session\n" +
+        "\n" +
+        "claudeX extension subcommands (honored before claude):\n" +
+        "  install        install host-side or in-container dependencies\n" +
+        "  update         update host-side or in-container dependencies\n" +
+        "  internal …     internal command dispatcher (tmux, shell, lazygit, ase-task-edit, capsula)\n"
+    )
+    process.exit(r.exitCode ?? 0)
+}
+
+/*  the main procedure -- builds and dispatches a commander program  */
+const main = async (): Promise<void> => {
+    /*  intercept top-level "-h/--help" before commander grabs it, so we can
+        pass-through to "claude --help" and append our extension info  */
+    const topArgs = process.argv.slice(2)
+    const firstNonFlag = topArgs.findIndex((a) => !a.startsWith("-"))
+    const headFlags = firstNonFlag < 0 ? topArgs : topArgs.slice(0, firstNonFlag)
+    const subcmd = firstNonFlag < 0 ? "" : topArgs[firstNonFlag]
+    if ((headFlags.includes("-h") || headFlags.includes("--help"))
+        && subcmd !== "install" && subcmd !== "update" && subcmd !== "internal")
+        actionHelp()
+
+    const program = new Command()
+    program
+        .name("claudex")
+        .description("Claude Code eXtended")
+        .version(JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf8")).version, "-V, --version")
+        .enablePositionalOptions()
+        .passThroughOptions()
+        .allowUnknownOption()
+        .helpOption(false)
+        .option("-C, --capsula", "execute Claude Code inside a Capsula sandbox container")
+        .option("-R, --recolor", "wrap Claude Code with ansi-recolor for theming")
+        .option("-T, --tmux",    "wrap Claude Code in a tmux session (replaces former \"session\" command)")
+        .argument("[args...]",   "arguments passed unparsed to Claude Code")
+        .action((args: string[], opts: TopOpts) => {
+            actionDefault(opts, args)
+        })
+
+    program
+        .command("install")
+        .description("install host-side or in-container dependencies")
+        .helpOption("-h, --help", "display help for command")
+        .option("-C, --capsula", "operate on the Capsula container instead of the host")
+        .action(async (opts: { capsula?: boolean }, cmd: Command) => {
+            const capsula = (opts.capsula === true) || (cmd.parent?.opts().capsula === true)
+            await actionInstall(capsula)
+        })
+
+    program
+        .command("update")
+        .description("update host-side or in-container dependencies")
+        .helpOption("-h, --help", "display help for command")
+        .option("-C, --capsula", "operate on the Capsula container instead of the host")
+        .action(async (opts: { capsula?: boolean }, cmd: Command) => {
+            const capsula = (opts.capsula === true) || (cmd.parent?.opts().capsula === true)
+            await actionUpdate(capsula)
+        })
+
+    program
+        .command("internal")
+        .description("internal command dispatcher (tmux, shell, lazygit, ase-task-edit, capsula)")
+        .helpOption("-h, --help", "display help for command")
+        .allowUnknownOption()
+        .argument("[args...]", "internal command name and its arguments")
+        .action(async (args: string[]) => {
+            await actionInternal(args)
+        })
+
+    await program.parseAsync(process.argv)
 }
 main().catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err)

@@ -72,7 +72,10 @@ Usage
 -----
 
 ```sh
-$ claudex session
+$ claudex -T          # tmux session (formerly: claudex session)
+$ claudex             # plain claude (formerly: claudex naked)
+$ claudex -R          # claude wrapped with ansi-recolor
+$ claudex -C -T       # tmux session inside a Capsula sandbox
 ```
 
 See Also
