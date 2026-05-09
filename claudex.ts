@@ -224,6 +224,7 @@ const detectActiveClaudeVersion = (binName: string): string | null => {
 
 /*  options for the top-level command  */
 type TopOpts = {
+    ase?:     boolean,
     capsula?: boolean,
     recolor?: boolean,
     tmux?:    boolean | string
@@ -677,11 +678,13 @@ const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
 
 /*  action: top-level command -- run "claude"  */
 const actionDefault = (opts: TopOpts, args: string[]): never => {
-    /*  build the inner self-invocation flag list. Pass-through "-R" only,
+    /*  build the inner self-invocation flag list. Pass-through "-R"/"-A" only,
         as "-C" and "-T" are consumed at the outer layer to avoid recursion.  */
     const innerFlags: string[] = []
     if (opts.recolor)
         innerFlags.push("-R")
+    if (opts.ase)
+        innerFlags.push("-A")
 
     /*  branch: tmux mode (with or without capsula)  */
     if (opts.tmux) {
@@ -823,29 +826,31 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
     }
 
     /*  override ASE configuration (for its diagram rendering)  */
-    if (process.env.ASE_TERM_WIDTH === undefined) {
-        let width = 0
-        if (process.stdout.isTTY) {
-            const cols = process.stdout.columns
-            if (typeof cols === "number" && cols > 0)
-                width = cols
+    if (opts.ase) {
+        if (process.env.ASE_TERM_WIDTH === undefined) {
+            let width = 0
+            if (process.stdout.isTTY) {
+                const cols = process.stdout.columns
+                if (typeof cols === "number" && cols > 0)
+                    width = cols
+            }
+            process.env.ASE_TERM_WIDTH = `${width}`
         }
-        process.env.ASE_TERM_WIDTH = `${width}`
-    }
-    if (process.env.ASE_TERM_COLORS === undefined) {
-        let colorMode = "none"
-        try {
-            const { stdout } = execaSync("tput", [ "colors" ], { reject: false })
-            const n = parseInt(stdout.trim(), 10)
-            if (!Number.isNaN(n) && n >= 256)
-                colorMode = "ansi256"
-            else if (!Number.isNaN(n) && n >= 16)
-                colorMode = "ansi16"
+        if (process.env.ASE_TERM_COLORS === undefined) {
+            let colorMode = "none"
+            try {
+                const { stdout } = execaSync("tput", [ "colors" ], { reject: false })
+                const n = parseInt(stdout.trim(), 10)
+                if (!Number.isNaN(n) && n >= 256)
+                    colorMode = "ansi256"
+                else if (!Number.isNaN(n) && n >= 16)
+                    colorMode = "ansi16"
+            }
+            catch (_e) {
+                /*  ignore  */
+            }
+            process.env.ASE_TERM_COLORS = `${colorMode}`
         }
-        catch (_e) {
-            /*  ignore  */
-        }
-        process.env.ASE_TERM_COLORS = `${colorMode}`
     }
 
     /*  determine Claude Code settings  */
@@ -864,12 +869,16 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 "Working",
                 "Working (Just be patient)"
             ]
-        },
-        "statusLine": {
-            "type": "command",
-            "command": "ase statusline -w 0 -m 2 '<blue>%u</blue> <red>%p</red> <black>%T</black> %s' '%m %e %t' '%P %c'",
-            "padding": 0
         }
+    } as Record<string, unknown>
+    if (opts.ase) {
+        claudeSettings = deepmerge(claudeSettings, {
+            "statusLine": {
+                "type": "command",
+                "command": "ase statusline -w 0 -m 2 '<blue>%u</blue> <red>%p</red> <black>%T</black> %s' '%m %e %t' '%P %c'",
+                "padding": 0
+            }
+        })
     }
     if (opts.tmux) {
         claudeSettings = deepmerge(claudeSettings, {
@@ -916,6 +925,7 @@ const actionHelp = (): never => {
     process.stdout.write(
         "\n" +
         "claudeX extension options (honored before claude):\n" +
+        "  -A, --ase            enable ASE-specific Claude Code statusline and ASE_* environment variables\n" +
         "  -C, --capsula        execute Claude Code inside a Capsula sandbox container\n" +
         "  -R, --recolor        wrap Claude Code with ANSI recoloring for improved theming\n" +
         "  -T, --tmux [session] wrap Claude Code in a Tmux terminal multiplexing session (optional session name)\n" +
@@ -950,6 +960,7 @@ const main = async (): Promise<void> => {
         .passThroughOptions()
         .allowUnknownOption()
         .helpOption(false)
+        .option("-A, --ase",            "enable ASE-specific Claude Code statusline and ASE_* environment variables")
         .option("-C, --capsula",        "execute Claude Code inside a Capsula sandbox container")
         .option("-R, --recolor",        "wrap Claude Code with ANSI recoloing for improved theming")
         .option("-T, --tmux [session]", "wrap Claude Code in a Tmux terminal multiplexing session (optional session name)")
