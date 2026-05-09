@@ -202,7 +202,21 @@ const detectSessionName = (): string => {
 
 /*  determine information  */
 const HOME        = process.env.HOME ?? os.homedir()
-const USER        = process.env.USER ?? ""
+const detectUser = (): string => {
+    if (process.env.USER)
+        return process.env.USER
+    if (process.env.LOGNAME)
+        return process.env.LOGNAME
+    if (process.env.USERNAME)
+        return process.env.USERNAME
+    try {
+        return os.userInfo().username
+    }
+    catch (_e) {
+        return ""
+    }
+}
+const USER        = detectUser()
 const TERM        = process.env.TERM ?? ""
 const ENVIRONMENT = process.env.ENVIRONMENT ?? ""
 
@@ -526,6 +540,7 @@ const actionInternalTmux = (args: string[]): never => {
     const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
         .replace(/@CLAUDEX@/g, `${shQ.quote([ process.execPath, selfPathJS ])}`)
         .replace(/@CLAUDEX_FLAGS_PASSTHROUGH@/g, claudexFlags)
+        .replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
     /*  ensure the temp config is removed on normal exit AND on signal-driven

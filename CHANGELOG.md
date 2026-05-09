@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.9.23 (2026-05-10)
+-------------------
+
+- IMPROVEMENT: replace "echo $LOGNAME" with a portable variant
+
 0.9.22 (2026-05-09)
 -------------------
 
