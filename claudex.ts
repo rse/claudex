@@ -758,8 +758,8 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         }
         else {
             /*  enter/start plain tmux  */
-            return execInherit(selfPath, [
-                "internal", "tmux", "new-session", "-A", "-s", session, "-n", "claude", inPane
+            return execInherit(process.execPath, [
+                selfPathJS, "internal", "tmux", "new-session", "-A", "-s", session, "-n", "claude", inPane
             ])
         }
     }
