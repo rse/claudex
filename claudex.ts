@@ -963,6 +963,40 @@ const actionHelp = (): never => {
 
 /*  the main procedure -- builds and dispatches according to options and commands  */
 const main = async (): Promise<void> => {
+    /*  honor the external CLAUDEX_FLAGS environment variable as a way to set
+        the top-level "-R"/"-C"/"-T"/"-A" flags by default. Merge env-derived
+        flags with the command-line flags (env first, command-line second, so
+        the user can extend or override on the command line). Skip for the
+        "internal" sub-dispatch, which inherits CLAUDEX_FLAGS through the
+        environment for its own purposes (e.g. tmux.conf bind-key flag
+        propagation), and skip flags that are already present on argv to
+        avoid duplicating boolean options.  */
+    {
+        const topArgs = process.argv.slice(2)
+        const subcmd = topArgs.find((a) => !a.startsWith("-")) ?? ""
+        const envFlags = (process.env.CLAUDEX_FLAGS ?? "").trim()
+        if (envFlags !== "" && subcmd !== "internal") {
+            const aliases: Record<string, string> = {
+                "-R": "--recolor", "--recolor": "-R",
+                "-C": "--capsula", "--capsula": "-C",
+                "-T": "--tmux",    "--tmux":    "-T",
+                "-A": "--ase",     "--ase":     "-A"
+            }
+            const present = (tok: string): boolean => {
+                if (topArgs.includes(tok))
+                    return true
+                const alt = aliases[tok]
+                if (alt !== undefined && topArgs.includes(alt))
+                    return true
+                return false
+            }
+            const tokens = envFlags.split(/\s+/).filter((t) => t !== "")
+            const toInsert = tokens.filter((t) => !present(t))
+            if (toInsert.length > 0)
+                process.argv.splice(2, 0, ...toInsert)
+        }
+    }
+
     /*  intercept top-level "-h/--help" before commander grabs it, so we can
         pass-through to "claude --help" and append our extension info  */
     const topArgs = process.argv.slice(2)
