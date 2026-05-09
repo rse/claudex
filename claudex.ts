@@ -108,7 +108,7 @@ const executeCommand = (config: { [ platform: string ]: string[] | string }) => 
     const osName = platform.split(":")[0]
     const command = config[platform] ?? config[`${osName}:*`]
     if (command === undefined)
-        return -1
+        fatal(`no command configured for platform "${platform}"`)
     const cmd = command instanceof Array ? command : command.split(/\s+/)
     info(`execute: $ ${cmd.join(" ")}`)
     const result = execaSync(cmd[0], cmd.slice(1), {
@@ -554,13 +554,15 @@ const main = async (): Promise<void> => {
                 }
                 else {
                     /*  start a new container and run tmux  */
-                    await self("shell", "-C", container, selfPath, "util", "tmux", "new-session", "-A", "-s", session, "-n", "claude", selfPath + " claude")
-                    return process.exit(0)
+                    return execInherit(process.execPath, [
+                        selfPathJS, "shell", "-C", container, selfPath, "util", "tmux",
+                        "new-session", "-A", "-s", session, "-n", "claude", selfPath + " claude"
+                    ])
                 }
             }
             else {
                 /*  enter/start plain tmux  */
-                return execInherit(selfPath, [ "util", "tmux", "new-session", "-A", "-s", session, "-n", "claude", `${selfPath} claude` ])
+                return execInherit(selfPath, [ "util", "tmux", "new-session", "-A", "-s", session, "-n", "claude", `${shq(selfPath)} claude` ])
             }
         }
 
@@ -586,8 +588,9 @@ const main = async (): Promise<void> => {
                 }
                 else {
                     /*  start a new container and run claude  */
-                    await self("shell", "-C", container, selfPath, "claude", ...argv)
-                    return process.exit(0)
+                    return execInherit(process.execPath, [
+                        selfPathJS, "shell", "-C", container, selfPath, "claude", ...argv
+                    ])
                 }
             }
             else {
@@ -776,10 +779,21 @@ const main = async (): Promise<void> => {
                         .replace(/@SELFPATH@/g, selfPath)
                     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
                     fs.writeFileSync(confFile, conf, { mode: 0o600 })
-                    return execInherit("tmux", [
+                    const r = execaSync("tmux", [
                         "-f", confFile,
                         ...argv
-                    ])
+                    ], {
+                        stdio:        "inherit",
+                        reject:       false,
+                        windowsHide:  false
+                    })
+                    try {
+                        fs.unlinkSync(confFile)
+                    }
+                    catch (_e) {
+                        /*  ignore  */
+                    }
+                    return process.exit(r.exitCode ?? 0)
                 }
                 case "bash": {
                     ensureTool("bash")
