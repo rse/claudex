@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.9.18 (2026-05-09)
+-------------------
+
+- BUGFIX: try to workaround problems in self-reference under Windows
+
 0.9.17 (2026-05-09)
 -------------------
 
