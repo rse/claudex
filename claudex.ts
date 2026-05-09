@@ -533,6 +533,17 @@ const actionInternalTmux = (args: string[]): never => {
         .replace(/@CLAUDEX_FLAGS_PASSTHROUGH@/g, claudexFlags)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
+    /*  ensure the temp config is removed on normal exit AND on signal-driven
+        termination (SIGINT/SIGTERM); SIGKILL and process panics remain
+        uncoverable. tmux.conf is read once at startup and not re-read via
+        source-file, so early removal is safe.  */
+    const cleanup = (): void => {
+        try { fs.unlinkSync(confFile) }
+        catch (_e) { /*  ignore  */ }
+    }
+    process.on("exit",    cleanup)
+    process.on("SIGINT",  () => { cleanup(); process.exit(130) })
+    process.on("SIGTERM", () => { cleanup(); process.exit(143) })
     const r = execaSync("tmux", [
         "-f", confFile,
         ...args
@@ -541,12 +552,7 @@ const actionInternalTmux = (args: string[]): never => {
         reject:       false,
         windowsHide:  false
     })
-    try {
-        fs.unlinkSync(confFile)
-    }
-    catch (_e) {
-        /*  ignore  */
-    }
+    cleanup()
     return process.exit(r.exitCode ?? 0)
 }
 
