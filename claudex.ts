@@ -550,18 +550,19 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
 const actionInternalTmux = (args: string[]): never => {
     ensureTool("tmux")
     let conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
-    conf = conf.replace(/@USER@/g, USER)
     if (isPsmux()) {
         /*  psmux does not honor the reverse ANSI sequence in at least the statusline
-            and no expansions at all in the pane border format  */
-        conf = conf.replace(/fg=default,bg=default,reverse/, "bg=black,fg=color15")
-            .replaceAll(/(status.*?)fg=blue,reverse/g, "$1bg=blue,fg=color15")
-            .replaceAll(/(status.*?)fg=blue/g,         "$1bg=blue,fg=color15")
-            .replaceAll(/(status.*?)fg=red/g,          "$1bg=red,fg=color15")
-            .replaceAll(/(status.*?)fg=default/g,      "$1bg=black,fg=color15")
-            .replaceAll(/#\[reverse\]/g,               "")
-            .replaceAll(/#\[noreverse\]/g,             "")
+            and not some expansions in the pane border format  */
+        conf +=
+            'set-option -g status-style                 bg=blue,fg=color15\n' +
+            'set-option -g status-left                  " claudeX #[bg=blue,fg=color15] ※ @USER@ #[bg=black,fg=color15] #{?session_attached,#[bg=red,fg=color15] ⚑ #{session_name} #[bg=black,fg=color15],}"\n' +
+            'set-option -g window-status-current-style  bg=red,fg=color15\n' +
+            'set-option -g window-status-bell-style     bg=blue,fg=color15\n' +
+            'set-option -g window-status-activity-style bg=blue,fg=color15\n' +
+            'set-option -g message-style                bg=blue,fg=color15\n' +
+            'set-option -g pane-border-format "─◀( #{pane_index} #{pane_title} )▶"\n'
     }
+    conf = conf.replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
     /*  ensure the temp config is removed on normal exit AND on signal-driven
