@@ -1,8 +1,13 @@
 #!/bin/sh
+##
+##  claudeX -- Claude Code eXtended
+##  Copyright (c) 2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+##  Licensed under MIT <https://spdx.org/licenses/MIT>
+##
 
-if [ ".$CLAUDEX" != . ]; then
-    PATH="$CLAUDEX:$PATH"
+if [ ".$CLAUDEX_BASEDIR" != . ]; then
+    PATH="$CLAUDEX_BASEDIR:$PATH"
 fi
 
-exec claudex $capsula ${1+"$@"}
+exec claudex ${1+"$@"}
 
