@@ -70,8 +70,8 @@ const detectPlatform = (): string => {
 
 /*  helper to spawn a child synchronously inheriting stdio, then exit
     with its code (the closest equivalent of Bash "exec ...")  */
-const execInherit = async (file: string, args: string[], opts: { env?: Env } = {}): Promise<never> => {
-    const r = await execa(file, args, {
+const execInherit = (file: string, args: string[], opts: { env?: Env } = {}): never => {
+    const r = execaSync(file, args, {
         stdio:        "inherit",
         env:          opts.env,
         reject:       false,
@@ -509,7 +509,7 @@ const main = async (): Promise<void> => {
                 const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
                 if (inspect.exitCode === 0) {
                     /*  enter already running container and run tmux  */
-                    await execInherit("docker", [
+                    return execInherit("docker", [
                         "exec", "-i", "-t", container,
                         "bash", "-c",
                         `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(selfPath)} util tmux new-session -A -s ${shq(session)}`
@@ -518,14 +518,13 @@ const main = async (): Promise<void> => {
                 else {
                     /*  start a new container and run tmux  */
                     await self("shell", "-C", container, selfPath, "util", "tmux", "new-session", "-A", "-s", session, "-n", "claude", selfPath + " claude")
-                    process.exit(0)
+                    return process.exit(0)
                 }
             }
             else {
                 /*  enter/start plain tmux  */
-                await execInherit(selfPath, [ "util", "tmux", "new-session", "-A", "-s", session, "-n", "claude", `${selfPath} claude` ])
+                return execInherit(selfPath, [ "util", "tmux", "new-session", "-A", "-s", session, "-n", "claude", `${selfPath} claude` ])
             }
-            break
         }
 
         case "naked": {
@@ -542,7 +541,7 @@ const main = async (): Promise<void> => {
                 if (inspect.exitCode === 0) {
                     /*  enter already running container and run claude (single-quote shell-escape)  */
                     const passthru = argv.map(shq).join(" ")
-                    await execInherit("docker", [
+                    return execInherit("docker", [
                         "exec", "-i", "-t", container,
                         "bash", "-c",
                         `TERM=${shq(TERM)} HOME=${shq(HOME)} sudo -E -u ${shq(USER)} ${shq(selfPath)} claude ${passthru}`
@@ -551,14 +550,13 @@ const main = async (): Promise<void> => {
                 else {
                     /*  start a new container and run claude  */
                     await self("shell", "-C", container, selfPath, "claude", ...argv)
-                    process.exit(0)
+                    return process.exit(0)
                 }
             }
             else {
                 /*  enter/start plain claude  */
-                await execInherit(selfPath, [ "claude", ...argv ])
+                return execInherit(selfPath, [ "claude", ...argv ])
             }
-            break
         }
 
         case "shell": {
@@ -620,7 +618,7 @@ const main = async (): Promise<void> => {
             }
 
             /*  execute  */
-            await execInherit("capsula", [
+            return execInherit("capsula", [
                 "-c", "claude",
                 "-t", "debian",
                 "-P", "linux/arm64",
@@ -633,7 +631,6 @@ const main = async (): Promise<void> => {
                 "-b", basedir,
                 ...argv
             ])
-            break
         }
 
         case "claude": {
@@ -718,7 +715,7 @@ const main = async (): Promise<void> => {
             }
 
             const settings = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8")
-            await execInherit("ansi-recolor", [
+            return execInherit("ansi-recolor", [
                 "-c", path.join(basedir, "ansi-recolor.conf"),
                 "-m",
                 "-n", "claude",
@@ -727,7 +724,6 @@ const main = async (): Promise<void> => {
                 "--settings", settings,
                 ...argv
             ], { env })
-            break
         }
 
         case "util": {
@@ -736,7 +732,7 @@ const main = async (): Promise<void> => {
             switch (util) {
                 case "tmux": {
                     ensureTool("tmux")
-                    await execInherit("tmux", [
+                    return execInherit("tmux", [
                         "-f", path.join(basedir, "tmux.conf"),
                         "bind-key", "c",   "new-window",   "-c", "#{pane_current_path}", "-n", "claude", `${selfPath} claude`, ";",
                         "bind-key", "|",   "split-window", "-c", "#{pane_current_path}", "-h",           `${selfPath} claude`, ";",
@@ -749,12 +745,10 @@ const main = async (): Promise<void> => {
                         "-T", "─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶", `${selfPath} util ase-task-edit`, ";",
                         ...argv
                     ])
-                    break
                 }
                 case "bash": {
                     ensureTool("bash")
-                    await execInherit("bash", [ "-l", ...argv ])
-                    break
+                    return execInherit("bash", [ "-l", ...argv ])
                 }
                 case "ase-task-edit": {
                     ensureTool("ase")
@@ -762,7 +756,7 @@ const main = async (): Promise<void> => {
                     const r1 = execaSync("tmux", [ "display-message", "-p", "#{@ase_task_id}" ], { reject: false })
                     tid = (r1.stdout ?? "").trim()
                     if (tid !== "")
-                        await execInherit("ase", [ "task", "edit", tid ])
+                        execInherit("ase", [ "task", "edit", tid ])
                     else {
                         process.stderr.write("no ASE task id known for this pane yet\n")
                         await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -775,7 +769,7 @@ const main = async (): Promise<void> => {
                     ensureTool("lazygit")
                     ensureTool("vim", { optional: true })
                     const env: Env = { ...process.env, TERM: "xterm-color" }
-                    await execInherit("ansi-recolor", [
+                    return execInherit("ansi-recolor", [
                         "-c", path.join(basedir, "ansi-recolor.conf"),
                         "-m",
                         "-n", "lazygit",
@@ -783,7 +777,6 @@ const main = async (): Promise<void> => {
                         "lazygit", "-ucf", path.join(basedir, "lazygit.yaml"),
                         ...argv
                     ], { env })
-                    break
                 }
                 default:
                     fatal(`invalid util "${util ?? ""}"`)
