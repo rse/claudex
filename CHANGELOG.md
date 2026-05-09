@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.9.21 (2026-05-09)
+-------------------
+
+- IMPROVEMENT: support CLAUDEX\_FLAGS env variable for passing default options
+
 0.9.20 (2026-05-09)
 -------------------
 
