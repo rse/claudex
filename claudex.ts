@@ -554,13 +554,17 @@ const actionInternalTmux = (args: string[]): never => {
         /*  psmux does not honor the reverse ANSI sequence in at least the statusline
             and not some expansions in the pane border format  */
         conf +=
-            "set-option -g status-style                 bg=blue,fg=color15\n" +
+            "set-option -g status-style                 bg=black,fg=color15\n" +
             "set-option -g status-left                  \" claudeX #[bg=blue,fg=color15] ※ @USER@ #[bg=black,fg=color15] #{?session_attached,#[bg=red,fg=color15] ⚑ #{session_name} #[bg=black,fg=color15],}\"\n" +
             "set-option -g window-status-current-style  bg=red,fg=color15\n" +
             "set-option -g window-status-bell-style     bg=blue,fg=color15\n" +
             "set-option -g window-status-activity-style bg=blue,fg=color15\n" +
             "set-option -g message-style                bg=blue,fg=color15\n" +
-            "set-option -g pane-border-format           \"─◀( #{pane_index} #{pane_title} )▶\"\n"
+            "set-hook   -g -u pane-exited\n" +
+            "set-hook   -g -u after-split-window\n" +
+            "bind-key g display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Version Control (lazygit) )▶\" claudex internal lazygit\n" +
+            "bind-key s display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Shell )▶\"                     claudex internal shell\n" +
+            "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" +
     }
     conf = conf.replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
