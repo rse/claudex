@@ -283,15 +283,6 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         info("install Claude Code")
         await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash`)
 
-        /*  prune obsolete versions only after successful install  */
-        await self("internal", "capsula", "bash", "-c",
-            "VERSIONS=\"$HOME/.local/share/claude/versions\"; " +
-            "[ -d \"$VERSIONS\" ] || exit 0; " +
-            "ACTIVE=$(\"$HOME/.local/bin/claude\" --version 2>/dev/null | awk '{print $1; exit}'); " +
-            "[ -n \"$ACTIVE\" ] || exit 0; " +
-            "find \"$VERSIONS\" -mindepth 1 -maxdepth 1 ! -name \"$ACTIVE\" -exec rm -rf {} +"
-        )
-
         info("install ANSI-Recolor")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
 
@@ -300,6 +291,15 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
 
         info("install Claude wrapper")
         await self("internal", "capsula", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
+
+        /*  prune obsolete versions only after successful install  */
+        await self("internal", "capsula", "bash", "-c",
+            "VERSIONS=\"$HOME/.local/share/claude/versions\"; " +
+            "[ -d \"$VERSIONS\" ] || exit 0; " +
+            "ACTIVE=$(\"$HOME/.local/bin/claude\" --version 2>/dev/null | awk '{print $1; exit}'); " +
+            "[ -n \"$ACTIVE\" ] || exit 0; " +
+            "find \"$VERSIONS\" -mindepth 1 -maxdepth 1 ! -name \"$ACTIVE\" -exec rm -rf {} +"
+        )
     }
     else {
         const platform = detectPlatform()
