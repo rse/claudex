@@ -12,8 +12,8 @@ import { execa, execaSync } from "execa"
 import which                from "which"
 import chalk                from "chalk"
 import deepmerge            from "deepmerge"
-import { Shescape }         from "shescape"
 import { Command }          from "commander"
+import * as shQ             from "shell-quote"
 
 /*  type for environment variable map  */
 type Env = Record<string, string | undefined>
@@ -170,10 +170,6 @@ const ensureTool = (tool: string | string[], options: {
             fatal(`required tool "${tool}" not found in $PATH`)
     }
 }
-
-/*  helper function to escape problematic shell characters  */
-const shescape = new Shescape({ shell: process.env.SHELL ?? true })
-const shq = (arg: string): string => shescape.quote(arg)
 
 /*  re-invoke this same script (mirrors "$0 ..." in Bash)  */
 const self = async (...args: string[]): Promise<number> => {
@@ -528,7 +524,7 @@ const actionInternalTmux = (args: string[]): never => {
     ensureTool("tmux")
     const claudexFlags = process.env.CLAUDEX_FLAGS_PASSTHROUGH ?? ""
     const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
-        .replace(/@CLAUDEX@/g, `${shq(process.execPath)} ${shq(selfPathJS)}`)
+        .replace(/@CLAUDEX@/g, `${shQ.quote([ process.execPath, selfPathJS ])}`)
         .replace(/@CLAUDEX_FLAGS_PASSTHROUGH@/g, claudexFlags)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
@@ -687,7 +683,33 @@ const actionInternalCapsula = (args: string[]): never => {
     ])
 }
 
-/*  action: internal sub-dispatch (tmux, shell, ase-task-edit, lazygit, capsula)  */
+/*  action: internal "exec" -- execute a command supplied via the
+    $CLAUDEX_INTERNAL_EXEC environment variable. The variable value is split
+    into argv via shell-quote (honoring '..' and ".." quoting, no shell
+    expansion of operators), and then the resulting command is run with stdio
+    inherited. This indirection exists to work around platforms (notably
+    Windows tmux) that mishandle quoting when a command is passed via "tmux
+    new-session" as multiple trailing argv items: we instead pass the whole
+    command as a single env-var value.  */
+const actionInternalExec = (): never => {
+    const cmdline = process.env.CLAUDEX_INTERNAL_EXEC ?? ""
+    if (cmdline === "")
+        fatal("CLAUDEX_INTERNAL_EXEC environment variable is empty or unset")
+    const parsed = shQ.parse(cmdline)
+    const argv: string[] = []
+    for (const tok of parsed) {
+        if (typeof tok === "string")
+            argv.push(tok)
+        else
+            fatal("CLAUDEX_INTERNAL_EXEC contains unsupported shell construct (operators, globs, or env-var expansion are not allowed)")
+    }
+    if (argv.length === 0)
+        fatal("CLAUDEX_INTERNAL_EXEC contains no command to execute")
+    const [ file, ...rest ] = argv
+    return execInherit(file, rest)
+}
+
+/*  action: internal sub-dispatch (tmux, shell, ase-task-edit, lazygit, capsula, exec)  */
 const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
     const util = args[0]
     const rest = args.slice(1)
@@ -697,6 +719,7 @@ const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
         case "ase-task-edit": return actionInternalAseTaskEdit()
         case "lazygit":       return actionInternalLazygit(opts.recolor === true, rest)
         case "capsula":       return actionInternalCapsula(rest)
+        case "exec":          return actionInternalExec()
         default:
             fatal(`invalid internal command "${util ?? ""}"`)
     }
@@ -726,13 +749,11 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             session = detectSessionName()
         const rest = args
 
-        /*  build the in-pane self-invocation shell string  */
-        const inPane = [ process.execPath, selfPathJS, ...innerFlags, ...rest ]
+        /*  build the in-pane self-invocation  */
+        const inPane = shQ.quote([ process.execPath, selfPathJS, ...innerFlags, ...rest ])
 
-        /*  propagate the chosen pass-through flags to "internal tmux" so its
-            tmux.conf bind-keys spawn new claude panes with the same flags  */
+        /*  propagate the chosen pass-through flags to "internal tmux"   */
         const claudexFlags = innerFlags.join(" ")
-        process.env.CLAUDEX_FLAGS_PASSTHROUGH = claudexFlags
 
         /*  dispatch according to global options  */
         if (opts.capsula) {
@@ -749,12 +770,12 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 return execInherit("docker", [
                     "exec", "-i", "-t", container,
                     "bash", "-c",
-                    `TERM=${shq(TERM)} ` +
-                    `HOME=${shq(HOME)} ` +
-                    `CLAUDEX_FLAGS_PASSTHROUGH=${shq(claudexFlags)} ` +
-                    `sudo -E -u ${shq(USER)} ` +
-                    `${shq(process.execPath)} ${shq(selfPathJS)} ` +
-                    `internal tmux new-session -A -s ${shq(session)}`
+                    `TERM=${shQ.quote([ TERM ])} ` +
+                    `HOME=${shQ.quote([ HOME ])} ` +
+                    `CLAUDEX_FLAGS_PASSTHROUGH=${shQ.quote([ claudexFlags ])} ` +
+                    `sudo -E -u ${shQ.quote([ USER ])} ` +
+                    `${shQ.quote([ process.execPath, selfPathJS ])} ` +
+                    `internal tmux new-session -A -s ${shQ.quote([ session ])}`
                 ])
             }
             else {
@@ -762,9 +783,10 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 return execInherit(process.execPath, [
                     selfPathJS, "internal", "capsula",
                     "-e", `CLAUDEX_FLAGS_PASSTHROUGH=${claudexFlags}`,
+                    "-e", `CLAUDEX_INTERNAL_EXEC=${inPane}`,
                     "-C", container, process.execPath, selfPathJS, "internal", "tmux",
                     "new-session", "-A", "-s", session, "-n", "claude",
-                    ...inPane
+                    "claudex", "internal", "exec"
                 ])
             }
         }
@@ -774,8 +796,13 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 selfPathJS,
                 "internal", "tmux",
                 "new-session", "-A", "-s", session, "-n", "claude",
-                ...inPane
-            ])
+                "claudex", "internal", "exec"
+            ], {
+                env: {
+                    CLAUDEX_FLAGS_PASSTHROUGH: claudexFlags,
+                    CLAUDEX_INTERNAL_EXEC: inPane
+                }
+            })
         }
     }
 
@@ -797,11 +824,11 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             return execInherit("docker", [
                 "exec", "-i", "-t", container,
                 "bash", "-c",
-                `TERM=${shq(TERM)} ` +
-                `HOME=${shq(HOME)} ` +
-                `sudo -E -u ${shq(USER)} ` +
-                `${shq(process.execPath)} ${shq(selfPathJS)} ` +
-                `${passthru.map(shq).join(" ")}`
+                `TERM=${shQ.quote([ TERM ])} ` +
+                `HOME=${shQ.quote([ HOME ])} ` +
+                `sudo -E -u ${shQ.quote([ USER ])} ` +
+                `${shQ.quote([ process.execPath, selfPathJS ])} ` +
+                `${shQ.quote(passthru)}`
             ])
         }
         else {
