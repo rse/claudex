@@ -359,7 +359,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             optional: true,
             hint: "https://git-scm.com",
             install: {
-                "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
+                "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git",
                 "windows:choco":  "choco install -y --accept-license --no-progress git",
                 "macos:ports":    "sudo port -N install git",
                 "macos:brew":     "sudo brew install git",
