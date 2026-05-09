@@ -19,7 +19,8 @@
         "which":                       "7.0.0",
         "execa":                       "9.6.1",
         "chalk":                       "5.6.2",
-        "commander":                   "14.0.3"
+        "commander":                   "14.0.3",
+        "deepmerge":                   "4.3.1"
     },
     "devDependencies": {
         "typescript":                  "6.0.3",

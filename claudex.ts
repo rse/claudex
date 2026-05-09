@@ -11,6 +11,7 @@ import * as os              from "node:os"
 import { execa, execaSync } from "execa"
 import which                from "which"
 import chalk                from "chalk"
+import deepmerge            from "deepmerge"
 import { Command }          from "commander"
 
 /*  type for environment variable map  */
@@ -847,8 +848,42 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         process.env.ASE_TERM_COLORS = `${colorMode}`
     }
 
+    /*  determine Claude Code settings  */
+    let claudeSettings = {
+        "env": {
+            "DISABLE_TELEMETRY":       "1",
+            "DISABLE_AUTOUPDATER":     "1",
+            "DISABLE_BUG_COMMAND":     "1",
+            "DISABLE_ERROR_REPORTING": "1"
+        },
+        "verbose": false,
+        "spinnerTipsEnabled": false,
+        "spinnerVerbs": {
+            "mode": "replace",
+            "verbs": [
+                "Working",
+                "Working (Just be patient)"
+            ]
+        },
+        "statusLine": {
+            "type": "command",
+            "command": "ase statusline -w 0 -m 2 '<blue>%u</blue> <red>%p</red> <black>%T</black> %s' '%m %e %t' '%P %c'",
+            "padding": 0
+        }
+    }
+    if (opts.tmux) {
+        claudeSettings = deepmerge(claudeSettings, {
+            "env": {
+                "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+            },
+            "teammateMode": "tmux",
+            "preferences": {
+                "tmuxSplitPanes": true
+            }
+        })
+    }
+
     /*  execute "claude"  */
-    const settings = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8")
     const claudeBin = path.join(HOME, ".local/bin/claude")
     if (recolor) {
         return execInherit("ansi-recolor", [
@@ -857,13 +892,13 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             "-n", "claude",
             "-t", path.join(HOME, "ansi-recolor.txt"),
             claudeBin,
-            "--settings", settings,
+            "--settings", JSON.stringify(claudeSettings),
             ...args
         ], { env })
     }
     else {
         return execInherit(claudeBin, [
-            "--settings", settings,
+            "--settings", JSON.stringify(claudeSettings),
             ...args
         ], { env })
     }
