@@ -67,22 +67,15 @@ const findTool = (tool: string): string | null => {
     return null
 }
 
-/*  helper to detect whether the available `tmux` is actually `psmux`
-    (the Windows port). psmux identifies itself in `tmux -V` output as
-    `psmux <version>` instead of upstream's `tmux <version>`. The result
-    is cached after the first invocation.  */
+/*  helper to detect whether the active `tmux` is actually `psmux`
+    (the Windows port). psmux does not identify itself via `tmux -V`,
+    so we instead check whether we are on Windows AND a `psmux` command
+    is available in $PATH. The result is cached after the first call.  */
 let isPsmuxCached: boolean | null = null
 const isPsmux = (): boolean => {
     if (isPsmuxCached !== null)
         return isPsmuxCached
-    const tool = findTool("tmux")
-    if (tool === null) {
-        isPsmuxCached = false
-        return false
-    }
-    const r = execaSync(tool, [ "-V" ], { reject: false, windowsHide: true })
-    const out = `${r.stdout ?? ""} ${r.stderr ?? ""}`
-    isPsmuxCached = /psmux/i.test(out)
+    isPsmuxCached = process.platform === "win32" && findTool("psmux") !== null
     return isPsmuxCached
 }
 
