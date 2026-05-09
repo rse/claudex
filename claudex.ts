@@ -106,20 +106,25 @@ const ensureTool = (tool: string | string[], options: {
 } = {}): void => {
     const tools = typeof tool === "string" ? [ tool ] : tool
     for (const tool of tools) {
-        const r = which.sync(tool, { nothrow: true })
-        if (r === null) {
-            if (options.install) {
-                const returnCode = executeCommand(options.install)
-                if (returnCode === 0)
+        let r = which.sync(tool, { nothrow: true })
+        if (r === null && options.install) {
+            const rc = executeCommand(options.install)
+            if (rc !== 0) {
+                if (options.optional)
                     continue
+                fatal(`failed to install required tool "${tool}" (exit ${rc})` +
+                    (options.hint !== undefined ? ` -- hint: ${options.hint}` : ""))
             }
-            if (options.optional)
-                continue
-            if (options.hint !== undefined)
-                fatal(`required tool "${tool}" not found in $PATH -- hint: ${options.hint}`)
-            else
-                fatal(`required tool "${tool}" not found in $PATH`)
+            r = which.sync(tool, { nothrow: true })
         }
+        if (r !== null)
+            continue
+        if (options.optional)
+            continue
+        if (options.hint !== undefined)
+            fatal(`required tool "${tool}" not found in $PATH -- hint: ${options.hint}`)
+        else
+            fatal(`required tool "${tool}" not found in $PATH`)
     }
 }
 
@@ -138,6 +143,24 @@ const self = async (...args: string[]): Promise<number> => {
     if ((r.exitCode ?? 0) !== 0)
         process.exit(r.exitCode ?? 1)
     return r.exitCode ?? 0
+}
+
+/*  detect the session/project name by walking up from the current working
+    directory looking for an AGENTS.md / CLAUDE.md marker; fall back to the
+    basename of the current working directory  */
+const detectSessionName = (): string => {
+    let dir = process.cwd()
+    while (true) {
+        if (fs.existsSync(path.join(dir, "AGENTS.md")) || fs.existsSync(path.join(dir, "CLAUDE.md")))
+            return path.basename(dir)
+        const parent = path.dirname(dir)
+        if (parent === dir)
+            break
+        dir = parent
+    }
+    const session = path.basename(process.cwd())
+    info(`no AGENTS.md/CLAUDE.md marker found; using cwd basename "${session}" as session name`)
+    return session
 }
 
 /*  sanity check usage  */
@@ -300,45 +323,59 @@ const main = async (): Promise<void> => {
                 })
 
                 info("install Claude Code")
-                /*  helper: remove obsolete Claude Code versions  */
-                const removeObsoleteClaudeVersions = (binName: string): void => {
-                    try {
-                        fs.unlinkSync(path.join(HOME, ".local/bin", binName))
-                    }
-                    catch (_e) {
-                    }
+                /*  helper: prune all but the given active Claude Code version  */
+                const pruneClaudeVersions = (active: string | null): void => {
+                    if (active === null)
+                        return
                     const versionsDir = path.join(HOME, ".local/share/claude/versions")
-                    if (fs.existsSync(versionsDir)) {
-                        for (const f of fs.readdirSync(versionsDir)) {
-                            try {
-                                fs.unlinkSync(path.join(versionsDir, f))
-                            }
-                            catch (_e) {
-                            }
+                    if (!fs.existsSync(versionsDir))
+                        return
+                    for (const f of fs.readdirSync(versionsDir)) {
+                        if (f === active)
+                            continue
+                        try {
+                            fs.rmSync(path.join(versionsDir, f), { recursive: true, force: true })
+                        }
+                        catch (_e) {
                         }
                     }
                 }
+                /*  helper: detect the active version via the installed binary  */
+                const detectActiveClaudeVersion = (binName: string): string | null => {
+                    try {
+                        const r = execaSync(path.join(HOME, ".local/bin", binName), [ "--version" ], { reject: false })
+                        const m = /^(\S+)/.exec(r.stdout ?? "")
+                        if (m)
+                            return m[1]
+                    }
+                    catch (_e) {
+                        /*  binary missing or not executable  */
+                    }
+                    return null
+                }
                 if (process.platform !== "win32") {
-                    removeObsoleteClaudeVersions("claude")
-
                     /*  run installation script  */
                     ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
                     ensureTool("curl", { hint: "https://curl.se/" })
                     await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash` ], {
                         stdio: "inherit", reject: false
                     })
+
+                    /*  prune obsolete versions only after successful install  */
+                    pruneClaudeVersions(detectActiveClaudeVersion("claude"))
                 }
                 else {
                     if (!process.env.PSModulePath)
                         fatal("on Windows the \"install\" command has to be run from within a PowerShell session")
-
-                    removeObsoleteClaudeVersions("claude.exe")
 
                     /*  run installation script  */
                     ensureTool("powershell")
                     await execa("powershell", [ "-NoProfile", "-Command", "irm https://claude.ai/install.ps1 | iex" ], {
                         stdio: "inherit", reject: false
                     })
+
+                    /*  prune obsolete versions only after successful install  */
+                    pruneClaudeVersions(detectActiveClaudeVersion("claude.exe"))
                 }
             }
             break
@@ -461,19 +498,8 @@ const main = async (): Promise<void> => {
                 session = argv[0]
                 argv = argv.slice(1)
             }
-            else {
-                let dir = process.cwd()
-                while (true) {
-                    if (fs.existsSync(path.join(dir, "AGENTS.md")) || fs.existsSync(path.join(dir, "CLAUDE.md"))) {
-                        session = path.basename(dir)
-                        break
-                    }
-                    const parent = path.dirname(dir)
-                    if (parent === dir)
-                        break
-                    dir = parent
-                }
-            }
+            else
+                session = detectSessionName()
 
             /*  dispatch according to environment  */
             if (sandbox) {
@@ -510,7 +536,7 @@ const main = async (): Promise<void> => {
             /*  dispatch according to environment  */
             if (sandbox) {
                 ensureTool("docker")
-                const session = "default"
+                const session = detectSessionName()
                 const container = `capsula-${USER}-debian-claude-${session}`
                 const inspect = execaSync("docker", [ "inspect", container ], { reject: false, stdio: "ignore" })
                 if (inspect.exitCode === 0) {
@@ -691,8 +717,7 @@ const main = async (): Promise<void> => {
                 process.env.ASE_TERM_COLORS = `${colorMode}`
             }
 
-            const settingsRaw = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8")
-            const settings = settingsRaw.replace(/@BASEDIR@/g, basedir)
+            const settings = fs.readFileSync(path.join(basedir, "claude-settings.json"), "utf8")
             await execInherit("ansi-recolor", [
                 "-c", path.join(basedir, "ansi-recolor.conf"),
                 "-m",
