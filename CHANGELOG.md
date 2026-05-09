@@ -6,6 +6,9 @@ ChangeLog
 -------------------
 
 - BUGFIX: fix building under Windows
+- BUGFIX: workaround shell argument escaping and tmux argument parsing problems under Windows
+- BUGFIX: fix internal script invocation
+- CLEANUP: record CHANGELOG entry for previous change
 
 0.9.21 (2026-05-09)
 -------------------
