@@ -67,6 +67,25 @@ const findTool = (tool: string): string | null => {
     return null
 }
 
+/*  helper to detect whether the available `tmux` is actually `psmux`
+    (the Windows port). psmux identifies itself in `tmux -V` output as
+    `psmux <version>` instead of upstream's `tmux <version>`. The result
+    is cached after the first invocation.  */
+let isPsmuxCached: boolean | null = null
+const isPsmux = (): boolean => {
+    if (isPsmuxCached !== null)
+        return isPsmuxCached
+    const tool = findTool("tmux")
+    if (tool === null) {
+        isPsmuxCached = false
+        return false
+    }
+    const r = execaSync(tool, [ "-V" ], { reject: false, windowsHide: true })
+    const out = `${r.stdout ?? ""} ${r.stderr ?? ""}`
+    isPsmuxCached = /psmux/i.test(out)
+    return isPsmuxCached
+}
+
 /*  helper for detecting the platform and package manager combination  */
 const detectPlatform = (): string => {
     /*  helper function for finding a tool in PATH  */
@@ -537,8 +556,18 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
     main() picks up.  */
 const actionInternalTmux = (args: string[]): never => {
     ensureTool("tmux")
-    const conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
-        .replace(/@USER@/g, USER)
+    let conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
+    conf = conf.replace(/@USER@/g, USER)
+    if (isPsmux()) {
+        /*  psmux does not honor the reverse ANSI sequence in at least the statusline  */
+        conf = conf.replace(/fg=default,bg=default,reverse/, "bg=black,fg=color15")
+            .replaceAll(/(status.*?)fg=blue,reverse/, "$1bg=blue,fg=color15")
+            .replaceAll(/(status.*?)fg=blue/,         "$1bg=blue,fg=color15")
+            .replaceAll(/(status.*?)fg=red/,          "$1bg=red,fg=color15")
+            .replaceAll(/(status.*?)fg=default/,      "$1bg=black,fg=color15")
+            .replaceAll(/#\[reverse\]/,               "#[bg=red,fg=color15]")
+            .replaceAll(/#\[noreverse\]/,             "#[fg=red,bg=default]")
+    }
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
     /*  ensure the temp config is removed on normal exit AND on signal-driven
