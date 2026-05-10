@@ -1007,24 +1007,26 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
 
     /*  override ASE configuration (for its diagram rendering)  */
     if (opts.ase) {
-        if (process.env.ASE_TERM_WIDTH === undefined) {
+        if (env.ASE_TERM_WIDTH === undefined) {
             let width = 0
             if (process.stdout.isTTY) {
                 const cols = process.stdout.columns
                 if (typeof cols === "number" && cols > 0)
                     width = cols
             }
-            process.env.ASE_TERM_WIDTH = `${width}`
+            env.ASE_TERM_WIDTH = `${width}`
         }
-        if (process.env.ASE_TERM_COLORS === undefined) {
+        if (env.ASE_TERM_COLORS === undefined) {
             let colorMode = "none"
             const depth = process.stdout.getColorDepth()
             if (depth >= 8)
                 colorMode = "ansi256"
             else if (depth >= 4)
                 colorMode = "ansi16"
-            process.env.ASE_TERM_COLORS = `${colorMode}`
+            env.ASE_TERM_COLORS = `${colorMode}`
         }
+        if (args.includes("-p") || args.includes("--print"))
+            env.ASE_HEADLESS = "true"
     }
 
     /*  determine Claude Code settings  */

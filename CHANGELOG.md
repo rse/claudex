@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.0.4 (2026-05-10)
+------------------
+
+- IMPROVEMENT: set `ASE_HEADLESS=true` when option -A/--ase and -p/--print are given
+
 1.0.3 (2026-05-10)
 ------------------
 
