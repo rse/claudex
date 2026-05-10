@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.0.3 (2026-05-10)
+------------------
+
+- BUGFIX: ignore global -T (tmux) option of claude -p (print) option is present
+
 1.0.2 (2026-05-10)
 ------------------
 

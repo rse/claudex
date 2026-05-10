@@ -1132,6 +1132,9 @@ const main = async (): Promise<void> => {
         ]
         const isClaudeNative = claudeNativeSubcmds.includes(subcmd)
         if (envFlags !== "" && subcmd !== "internal" && !isClaudeNative) {
+            const tokens = envFlags.split(/\s+/).filter((t) => t !== "")
+
+            /*  provide check whether global options are present  */
             const aliases: Record<string, string> = {
                 "-R": "--recolor", "--recolor": "-R",
                 "-C": "--capsula", "--capsula": "-C",
@@ -1146,8 +1149,26 @@ const main = async (): Promise<void> => {
                     return true
                 return false
             }
-            const tokens = envFlags.split(/\s+/).filter((t) => t !== "")
-            const toInsert = tokens.filter((t) => !present(t))
+
+            /*  ignore "-T"/"--tmux" from CLAUDEX_FLAGS when claude is
+                invoked with any of these options, as the corresponding
+                non-interactive or session-related modes are incompatible
+                with wrapping claude inside a Tmux session  */
+            const noTmuxOpts = [ "-p" ]
+            const skipTmux = topArgs.some((a) => noTmuxOpts.includes(a))
+            const filtered: string[] = []
+            for (let i = 0; i < tokens.length; i++) {
+                const t = tokens[i]
+                if (skipTmux && (t === "-T" || t === "--tmux")) {
+                    if (i + 1 < tokens.length && !tokens[i + 1].startsWith("-"))
+                        i++
+                    continue
+                }
+                filtered.push(t)
+            }
+
+            /*  insert in front of the other arguments  */
+            const toInsert = filtered.filter((t) => !present(t))
             if (toInsert.length > 0)
                 process.argv.splice(2, 0, ...toInsert)
         }
