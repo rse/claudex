@@ -593,10 +593,10 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
     (e.g. "-R") are propagated to those panes via the CLAUDEX_FLAGS env var
     (set by actionDefault when entering tmux mode), which the env-merge in
     main() picks up.  */
-const actionInternalTmux = (ase: boolean, args: string[]): never => {
+const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
     ensureTool("tmux")
     let conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
-    if (ase) {
+    if (opts.ase) {
         /*  ASE-specific bind-keys (only when "-A" is in effect)  */
         conf +=
             "bind-key q display-popup -E -w 95% -h 95% -T \"─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶\" claudex internal ase-task-edit\n" +
@@ -617,7 +617,7 @@ const actionInternalTmux = (ase: boolean, args: string[]): never => {
             "set-hook   -g -u after-split-window\n" +
             "bind-key g display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Version Control (lazygit) )▶\" claudex internal lazygit\n" +
             "bind-key s display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Shell )▶\"                     claudex internal shell\n" +
-            (ase ? "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" : "")
+            (opts.ase ? "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" : "")
     }
     conf = conf.replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
@@ -646,7 +646,7 @@ const actionInternalTmux = (ase: boolean, args: string[]): never => {
 }
 
 /*  action: internal "shell" -- spawn an interactive login shell  */
-const actionInternalShell = (args: string[]): never => {
+const actionInternalShell = (_opts: TopOpts, args: string[]): never => {
     if (process.platform === "win32") {
         const shell = process.env.SHELL ?? process.env.ComSpec ?? "powershell"
         const name = path.basename(shell).toLowerCase().replace(/\.exe$/, "")
@@ -667,7 +667,7 @@ const actionInternalShell = (args: string[]): never => {
 }
 
 /*  action: internal "ase-task-edit" -- edit the ASE task associated with the current tmux pane  */
-const actionInternalAseTaskEdit = async (): Promise<void> => {
+const actionInternalAseTaskEdit = async (_opts: TopOpts): Promise<void> => {
     ensureTool("ase")
     let tid = ""
     const r1 = execaSync("tmux", [ "display-message", "-p", "#{@ase_task_id}" ], { reject: false })
@@ -681,11 +681,11 @@ const actionInternalAseTaskEdit = async (): Promise<void> => {
 }
 
 /*  action: internal "lazygit" -- spawn lazygit (optionally recolored)  */
-const actionInternalLazygit = (recolor: boolean, args: string[]): never => {
+const actionInternalLazygit = (opts: TopOpts, args: string[]): never => {
     ensureTool("git")
     ensureTool("lazygit")
     const env: Env = { ...process.env, TERM: "xterm-color" }
-    if (recolor) {
+    if (opts.recolor) {
         ensureTool("ansi-recolor")
         return execInherit("ansi-recolor", [
             "-c", path.join(basedir, "ansi-recolor.conf"),
@@ -703,7 +703,7 @@ const actionInternalLazygit = (recolor: boolean, args: string[]): never => {
 }
 
 /*  action: internal "capsula" -- enter/start a Capsula container with the curated env-var/dotfile setup  */
-const actionInternalCapsula = (args: string[]): never => {
+const actionInternalCapsula = (_opts: TopOpts, args: string[]): never => {
     /*  sanity check environment  */
     ensureTool("capsula")
     if (ENVIRONMENT === "capsula")
@@ -785,7 +785,7 @@ const actionInternalCapsula = (args: string[]): never => {
     Windows tmux) that mishandle quoting when a command is passed via "tmux
     new-session" as multiple trailing argv items: we instead pass the whole
     command as a single env-var value.  */
-const actionInternalExec = (): never => {
+const actionInternalExec = (_opts: TopOpts): never => {
     const cmdline = process.env.CLAUDEX_INTERNAL_EXEC ?? ""
     if (cmdline === "")
         fatal("CLAUDEX_INTERNAL_EXEC environment variable is empty or unset")
@@ -814,12 +814,12 @@ const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
     const util = args[0]
     const rest = args.slice(1)
     switch (util) {
-        case "tmux":          return actionInternalTmux(opts.ase === true, rest)
-        case "shell":         return actionInternalShell(rest)
-        case "ase-task-edit": return actionInternalAseTaskEdit()
-        case "lazygit":       return actionInternalLazygit(opts.recolor === true, rest)
-        case "capsula":       return actionInternalCapsula(rest)
-        case "exec":          return actionInternalExec()
+        case "tmux":          return actionInternalTmux(opts, rest)
+        case "shell":         return actionInternalShell(opts, rest)
+        case "ase-task-edit": return actionInternalAseTaskEdit(opts)
+        case "lazygit":       return actionInternalLazygit(opts, rest)
+        case "capsula":       return actionInternalCapsula(opts, rest)
+        case "exec":          return actionInternalExec(opts)
         default:
             fatal(`invalid internal command "${util ?? ""}"`)
     }

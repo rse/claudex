@@ -8,6 +8,7 @@ ChangeLog
 - IMPROVEMENT: install also ASE (@rse/ase)
 - IMPROVEMENT: add "claude stats" functionality, based on CodeBurn tool
 - CLEANUP: provide ASE specific Tmux config only under global option -A
+- CLEANUP: refactoring for using the global options in all internal commands
 
 0.9.24 (2026-05-10)
 -------------------
