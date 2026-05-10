@@ -62,28 +62,40 @@ In the default action the `claude` invocation:
 ### Subcommands
 
 - `install` &mdash; install host-side deps (tmux, lazygit, git, node, ansi-recolor,
-  typescript-language-server, claude) via the platform's package manager (winget/choco on
-  Windows, MacPorts/Homebrew on macOS, apt/apk on Linux), OR the in-container deps when
-  `-C` is passed (Debian apt + Node.js + claude installer + the `claude` wrapper into
-  `/usr/bin/claude`).
+  typescript-language-server, codeburn, `@rse/ase`, claude) via the platform's package
+  manager (winget/choco on Windows, MacPorts/Homebrew on macOS, apt/apk on Linux), OR the
+  in-container deps when `-C` is passed (Debian apt + Node.js + ansi-recolor +
+  typescript-language-server + codeburn + `@rse/ase` + claude installer + the `claude`
+  wrapper into `/usr/bin/claude`).
 - `update` &mdash; update those same components.
+- `stats [args...]` &mdash; show Claude Code usage statistics by invoking
+  `codeburn report --provider claude --period 30days [args...]`.
 - `internal <util> [args...]` &mdash; internal sub-dispatch, used by re-entrant
   self-invocation (tmux bind-keys, container `docker exec` strings, etc.). Utilities:
-  - `internal tmux <tmux-args>` &mdash; spawn `tmux -f <generated-conf>` using `tmux.conf`
-    with `@CLAUDEX@` substituted to `node /path/to/claudex.js` and `@CLAUDEX_FLAGS_PASSTHROUGH@`
-    substituted to the propagated pass-through flags. Bind-keys: `c`/`|`/`-` (new claude
-    pane), `g` (lazygit popup), `b` (bash/shell popup), `q` (ASE task-edit popup).
+  - `internal tmux <tmux-args>` &mdash; spawn `tmux -f <generated-conf>` from `tmux.conf`
+    (written to a per-PID temp file and cleaned up on exit/SIGINT/SIGTERM). The base
+    `tmux.conf` already invokes `claudex` directly (no placeholder substitution).
+    Base bind-keys: `c`/`|`/`-` (new claude pane), `g` (lazygit popup), `s` (shell
+    popup). When `-A` is in effect, additional bind-keys are appended: `q` (ASE
+    task-edit popup), `t` (send `/ase:ase-meta-task `), `p` (send
+    `/ase:ase-meta-persona `). When the active tmux is `psmux` (Windows), an extra
+    block of overrides is appended (status/window styles, hook resets, popup-based
+    `g`/`s`/`q` rebindings) to work around psmux limitations.
   - `internal shell [args...]` &mdash; spawn an interactive login shell
-    (`$SHELL -l ...` on POSIX; PowerShell or `$ComSpec` on Windows).
+    (`$SHELL -l ...` on POSIX; PowerShell `-NoLogo -NoProfile` or `$ComSpec` on Windows).
   - `internal ase-task-edit` &mdash; read `#{@ase_task_id}` from the current tmux pane and
     run `ase task edit <tid>`.
   - `internal lazygit [args...]` &mdash; spawn `lazygit -ucf lazygit.yaml`, optionally
     wrapped by `ansi-recolor` when `-R` is in effect.
   - `internal capsula [args...]` &mdash; spawn `capsula -c claude -t debian -P linux/arm64`
-    with the curated env-var allowlist (`TERM`, `HOME`, `CLAUDE_MODEL`, `CLAUDEX`),
-    dotfile mount list (`.bashrc`, `.gitconfig`, `.ssh/*`, `.vimrc`, `.tmux.conf`,
-    `.claude*`, `.dotfiles/*`, etc.), `.env`-file null-mounts (walked up from cwd), and
-    `-b basedir`.
+    with a curated env-var allowlist (`TERM`, `HOME`, plus explicit `CLAUDE_MODEL` and
+    `CLAUDEX=<basedir>`), dotfile mount list (`.bashrc`, `.gitconfig`, `.ssh/*`,
+    `.vimrc`, `.tmux.conf`, `.claude*`, `.dotfiles/*`, etc.), `.env`-file null-mounts
+    (walked up from cwd), and `-b basedir`.
+  - `internal exec` &mdash; parse the `$CLAUDEX_INTERNAL_EXEC` env var as a shell-quoted
+    argv (via `shell-quote`, no operators/globs/expansion) and exec the resulting
+    command with inherited stdio. Used to work around quoting issues when passing a
+    command line through `tmux new-session` (notably on Windows tmux).
 
 ### Self-invocation
 
@@ -97,13 +109,16 @@ substituted into `tmux.conf` via the `@CLAUDEX@` placeholder.
 ### Flag propagation
 
 The pass-through flags `-R` and `-A` are propagated to spawned tmux panes via the
-`CLAUDEX_FLAGS_PASSTHROUGH` env var so new claude panes inherit the user's choice.
-`-C` and `-T` are deliberately NOT propagated (they are consumed at the outer layer to
-avoid recursive container/tmux nesting).
+`CLAUDEX_FLAGS` env var (set when entering tmux mode) so new in-pane `claudex`
+invocations inherit the user's choice. The first claude pane is launched via
+`CLAUDEX_INTERNAL_EXEC` (a shell-quoted argv consumed by `internal exec`). `-C` and
+`-T` are deliberately NOT propagated (they are consumed at the outer layer to avoid
+recursive container/tmux nesting).
 
-The `CLAUDEX_FLAGS` env var lets users set default top-level flags (`-R`/`-C`/`-T`/`-A`);
-they are merged with command-line flags (env first, command-line second; already-present
-flags are not duplicated). This merge is skipped for the `internal` sub-dispatch.
+The `CLAUDEX_FLAGS` env var also lets users set default top-level flags
+(`-R`/`-C`/`-T`/`-A`); they are merged with command-line flags (env first,
+command-line second; already-present flags are not duplicated, recognizing
+short/long aliases). This merge is skipped for the `internal` sub-dispatch.
 
 ### Sandbox detection
 

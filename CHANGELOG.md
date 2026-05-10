@@ -2,13 +2,14 @@
 ChangeLog
 =========
 
-0.9.24 (2026-05-10)
+0.9.25 (2026-05-10)
 -------------------
 
 - IMPROVEMENT: install also ASE (@rse/ase)
 - IMPROVEMENT: add "claude stats" functionality, based on CodeBurn tool
 - CLEANUP: provide ASE specific Tmux config only under global option -A
 - CLEANUP: refactoring for using the global options in all internal commands
+- CLEANUP: update AGENTS.md file to reflect all changes to claudex.ts
 
 0.9.24 (2026-05-10)
 -------------------
