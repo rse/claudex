@@ -1126,7 +1126,12 @@ const main = async (): Promise<void> => {
         const topArgs = process.argv.slice(2)
         const subcmd = topArgs.find((a) => !a.startsWith("-")) ?? ""
         const envFlags = (process.env.CLAUDEX_FLAGS ?? "").trim()
-        if (envFlags !== "" && subcmd !== "internal") {
+        const claudeNativeSubcmds = [
+            "agents", "auth", "auto-mode", "doctor", "mcp",
+            "plugin", "plugins", "project", "setup-token", "ultrareview"
+        ]
+        const isClaudeNative = claudeNativeSubcmds.includes(subcmd)
+        if (envFlags !== "" && subcmd !== "internal" && !isClaudeNative) {
             const aliases: Record<string, string> = {
                 "-R": "--recolor", "--recolor": "-R",
                 "-C": "--capsula", "--capsula": "-C",

@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.0.1 (2026-05-10)
+------------------
+
+- BUGFIX: ignore flags in CLAUDEX\_FLAGS for the native Claude Code commands
+
 1.0.0 (2026-05-10)
 ------------------
 
