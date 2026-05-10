@@ -307,6 +307,9 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         info("install ANSI-Recolor")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
 
+        info("install CodeBurn")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
+
         info("install TypeScript LS")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
 
@@ -391,6 +394,16 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             }
         })
 
+        info("install CodeBurn")
+        ensureTool("codeburn", {
+            hint: "https://www.npmjs.com/package/codeburn",
+            install: {
+                "windows:*": "npm install -g codeburn",
+                "macos:*":   "sudo npm install -g codeburn",
+                "linux:*":   "sudo npm install -g codeburn"
+            }
+        })
+
         info("install TypeScript-Language-Server")
         ensureTool("typescript-language-server", {
             hint: "https://github.com/typescript-language-server/typescript-language-server",
@@ -456,6 +469,9 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         info("update ANSI-Recolor")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
 
+        info("update CodeBurn")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
+
         info("update TypeScript LS")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
 
@@ -508,6 +524,13 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
             "windows:*": "npm install -g ansi-recolor",
             "macos:*":   "sudo npm install -g ansi-recolor",
             "linux:*":   "sudo npm install -g ansi-recolor"
+        })
+
+        info("update CodeBurn")
+        executeCommand({
+            "windows:*": "npm install -g codeburn",
+            "macos:*":   "sudo npm install -g codeburn",
+            "linux:*":   "sudo npm install -g codeburn"
         })
 
         info("update TypeScript-Language-Server")
@@ -748,6 +771,12 @@ const actionInternalExec = (): never => {
         fatal("CLAUDEX_INTERNAL_EXEC contains no command to execute")
     const [ file, ...rest ] = argv
     return execInherit(file, rest)
+}
+
+/*  action: "stats" -- show Claude Code usage statistics via codeburn  */
+const actionStats = async (args: string[]): Promise<never> => {
+    ensureTool("codeburn", { hint: "run \"claudex install\" or \"claudex update\" first" })
+    return execInherit("codeburn", [ "report", "--provider", "claude", "--period", "30days", ...args ])
 }
 
 /*  action: internal sub-dispatch (tmux, shell, ase-task-edit, lazygit, capsula, exec)  */
@@ -1047,6 +1076,7 @@ const actionHelp = (): never => {
         "claudeX extension subcommands (honored before claude):\n" +
         "  install              install host-side or in-container dependencies\n" +
         "  update               update  host-side or in-container dependencies\n" +
+        "  stats                show Claude Code usage statistics\n" +
         "  internal …           internal command dispatcher (internal use only)\n"
     )
     process.exit(0)
@@ -1134,6 +1164,17 @@ const main = async (): Promise<void> => {
         .action(async (_opts: object, cmd: Command) => {
             const capsula = cmd.parent?.opts().capsula === true
             await actionUpdate(capsula)
+        })
+
+    /*  dispatch "stats" sub-command  */
+    program
+        .command("stats")
+        .description("show Claude Code usage statistics")
+        .helpOption("-h, --help", "display help for command")
+        .allowUnknownOption()
+        .argument("[args...]", "additional arguments passed to codeburn")
+        .action(async (args: string[]) => {
+            await actionStats(args)
         })
 
     /*  dispatch "internal" sub-command  */
