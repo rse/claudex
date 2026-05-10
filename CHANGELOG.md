@@ -5,6 +5,7 @@ ChangeLog
 0.9.24 (2026-05-10)
 -------------------
 
+- IMPROVEMENT: install also ASE (@rse/ase)
 - IMPROVEMENT: add "claude stats" functionality, based on CodeBurn tool
 
 0.9.24 (2026-05-10)

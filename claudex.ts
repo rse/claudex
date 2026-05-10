@@ -307,11 +307,14 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         info("install ANSI-Recolor")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
 
+        info("install TypeScript LS")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+
         info("install CodeBurn")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
 
-        info("install TypeScript LS")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+        info("install ASE")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "@rse/ase")
 
         info("install Claude wrapper")
         await self("internal", "capsula", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
@@ -394,6 +397,16 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             }
         })
 
+        info("install TypeScript-Language-Server")
+        ensureTool("typescript-language-server", {
+            hint: "https://github.com/typescript-language-server/typescript-language-server",
+            install: {
+                "windows:*": "npm install -g typescript-language-server",
+                "macos:*":   "sudo npm install -g typescript-language-server",
+                "linux:*":   "sudo npm install -g typescript-language-server"
+            }
+        })
+
         info("install CodeBurn")
         ensureTool("codeburn", {
             hint: "https://www.npmjs.com/package/codeburn",
@@ -404,13 +417,13 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             }
         })
 
-        info("install TypeScript-Language-Server")
-        ensureTool("typescript-language-server", {
-            hint: "https://github.com/typescript-language-server/typescript-language-server",
+        info("install ASE")
+        ensureTool("ase", {
+            hint: "https://ase.tools",
             install: {
-                "windows:*": "npm install -g typescript-language-server",
-                "macos:*":   "sudo npm install -g typescript-language-server",
-                "linux:*":   "sudo npm install -g typescript-language-server"
+                "windows:*": "npm install -g @rse/ase",
+                "macos:*":   "sudo npm install -g @rse/ase",
+                "linux:*":   "sudo npm install -g @rse/ase"
             }
         })
 
@@ -469,11 +482,14 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         info("update ANSI-Recolor")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
 
+        info("update TypeScript LS")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+
         info("update CodeBurn")
         await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
 
-        info("update TypeScript LS")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+        info("update ASE")
+        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "@rse/ase")
 
         info("update Claude wrapper")
         await self("internal", "capsula", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
@@ -526,6 +542,13 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
             "linux:*":   "sudo npm install -g ansi-recolor"
         })
 
+        info("update TypeScript-Language-Server")
+        executeCommand({
+            "windows:*": "npm install -g typescript-language-server",
+            "macos:*":   "sudo npm install -g typescript-language-server",
+            "linux:*":   "sudo npm install -g typescript-language-server"
+        })
+
         info("update CodeBurn")
         executeCommand({
             "windows:*": "npm install -g codeburn",
@@ -533,11 +556,11 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
             "linux:*":   "sudo npm install -g codeburn"
         })
 
-        info("update TypeScript-Language-Server")
+        info("update ASE")
         executeCommand({
-            "windows:*": "npm install -g typescript-language-server",
-            "macos:*":   "sudo npm install -g typescript-language-server",
-            "linux:*":   "sudo npm install -g typescript-language-server"
+            "windows:*": "npm install -g @rse/ase",
+            "macos:*":   "sudo npm install -g @rse/ase",
+            "linux:*":   "sudo npm install -g @rse/ase"
         })
 
         info("update Claude Code")
