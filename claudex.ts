@@ -593,9 +593,16 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
     (e.g. "-R") are propagated to those panes via the CLAUDEX_FLAGS env var
     (set by actionDefault when entering tmux mode), which the env-merge in
     main() picks up.  */
-const actionInternalTmux = (args: string[]): never => {
+const actionInternalTmux = (ase: boolean, args: string[]): never => {
     ensureTool("tmux")
     let conf = fs.readFileSync(path.join(basedir, "tmux.conf"), "utf8")
+    if (ase) {
+        /*  ASE-specific bind-keys (only when "-A" is in effect)  */
+        conf +=
+            "bind-key q display-popup -E -w 95% -h 95% -T \"─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶\" claudex internal ase-task-edit\n" +
+            "bind-key t send-keys \"/ase:ase-meta-task \"\n" +
+            "bind-key p send-keys \"/ase:ase-meta-persona \"\n"
+    }
     if (isPsmux()) {
         /*  psmux does not honor the reverse ANSI sequence in at least the statusline
             and not some expansions in the pane border format  */
@@ -610,7 +617,7 @@ const actionInternalTmux = (args: string[]): never => {
             "set-hook   -g -u after-split-window\n" +
             "bind-key g display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Version Control (lazygit) )▶\" claudex internal lazygit\n" +
             "bind-key s display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Shell )▶\"                     claudex internal shell\n" +
-            "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n"
+            (ase ? "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" : "")
     }
     conf = conf.replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
@@ -807,7 +814,7 @@ const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
     const util = args[0]
     const rest = args.slice(1)
     switch (util) {
-        case "tmux":          return actionInternalTmux(rest)
+        case "tmux":          return actionInternalTmux(opts.ase === true, rest)
         case "shell":         return actionInternalShell(rest)
         case "ase-task-edit": return actionInternalAseTaskEdit()
         case "lazygit":       return actionInternalLazygit(opts.recolor === true, rest)
@@ -870,7 +877,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                     `CLAUDEX_FLAGS=${shQ.quote([ claudexFlags ])} ` +
                     `sudo -E -u ${shQ.quote([ USER ])} ` +
                     `${shQ.quote([ process.execPath, selfPathJS ])} ` +
-                    `internal tmux new-session -A -s ${shQ.quote([ session ])}`
+                    `${opts.ase ? "-A " : ""}internal tmux new-session -A -s ${shQ.quote([ session ])}`
                 ])
             }
             else {
@@ -879,7 +886,8 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                     selfPathJS, "internal", "capsula",
                     "-e", `CLAUDEX_FLAGS=${claudexFlags}`,
                     "-e", `CLAUDEX_INTERNAL_EXEC=${inPane}`,
-                    "-C", container, process.execPath, selfPathJS, "internal", "tmux",
+                    "-C", container, process.execPath, selfPathJS,
+                    ...(opts.ase ? [ "-A" ] : []), "internal", "tmux",
                     "new-session", "-A", "-s", session, "-n", "claude",
                     "claudex", "internal", "exec"
                 ])
@@ -889,7 +897,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             /*  enter/start plain tmux  */
             return execInherit(process.execPath, [
                 selfPathJS,
-                "internal", "tmux",
+                ...(opts.ase ? [ "-A" ] : []), "internal", "tmux",
                 "new-session", "-A", "-s", session, "-n", "claude",
                 "claudex", "internal", "exec"
             ], {
