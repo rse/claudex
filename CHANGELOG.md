@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.0.2 (2026-05-10)
+------------------
+
+- IMPROVEMENT: provide a STX "publish" target for convenient release
+
 1.0.1 (2026-05-10)
 ------------------
 
