@@ -941,7 +941,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 "internal", "capsula", "-C", container,
                 process.execPath, selfPathJS,
                 ...passthru
-            ])
+            ], { env: process.env })
         }
     }
 
