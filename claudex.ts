@@ -837,10 +837,6 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
 
     /*  branch: tmux mode (with or without capsula)  */
     if (opts.tmux) {
-        /*  sanity check environment  */
-        if (ENVIRONMENT === "capsula")
-            fatal("cannot execute tmux mode from within Capsula environment")
-
         /*  determine session name (from "-T <name>" option value, or auto-detected)  */
         let session: string
         if (typeof opts.tmux === "string" && opts.tmux !== "")
