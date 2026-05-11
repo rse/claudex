@@ -2,6 +2,13 @@
 ChangeLog
 =========
 
+1.0.5 (2026-05-11)
+------------------
+
+- BUGFIX: use "node" inside container instead of full path to Node executable
+- BUGFIX: correctly pass environment to container processes
+- BUGFIX: remove incorrect Capsula environment check
+
 1.0.4 (2026-05-10)
 ------------------
 
