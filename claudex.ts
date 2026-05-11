@@ -872,7 +872,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                     `HOME=${shQ.quote([ HOME ])} ` +
                     `CLAUDEX_FLAGS=${shQ.quote([ claudexFlags ])} ` +
                     `sudo -E -u ${shQ.quote([ USER ])} ` +
-                    `${shQ.quote([ process.execPath, selfPathJS ])} ` +
+                    `${shQ.quote([ "node" /* process.execPath is not valid inside container! */, selfPathJS ])} ` +
                     `${opts.ase ? "-A " : ""}internal tmux new-session -A -s ${shQ.quote([ session ])}`
                 ])
             }
@@ -882,7 +882,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                     selfPathJS, "internal", "capsula",
                     "-e", `CLAUDEX_FLAGS=${claudexFlags}`,
                     "-e", `CLAUDEX_INTERNAL_EXEC=${inPane}`,
-                    "-C", container, process.execPath, selfPathJS,
+                    "-C", container, "node" /* process.execPath is not valid inside container! */, selfPathJS,
                     ...(opts.ase ? [ "-A" ] : []), "internal", "tmux",
                     "new-session", "-A", "-s", session, "-n", "claude",
                     "claudex", "internal", "exec"
@@ -926,7 +926,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 `TERM=${shQ.quote([ TERM ])} ` +
                 `HOME=${shQ.quote([ HOME ])} ` +
                 `sudo -E -u ${shQ.quote([ USER ])} ` +
-                `${shQ.quote([ process.execPath, selfPathJS ])} ` +
+                `${shQ.quote([ "node" /* process.execPath is not valid inside container! */, selfPathJS ])} ` +
                 `${shQ.quote(passthru)}`
             ])
         }
@@ -935,7 +935,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             return execInherit(process.execPath, [
                 selfPathJS,
                 "internal", "capsula", "-C", container,
-                process.execPath, selfPathJS,
+                "node" /* process.execPath is not valid inside container! */, selfPathJS,
                 ...passthru
             ], { env: process.env })
         }
