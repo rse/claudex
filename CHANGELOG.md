@@ -2,9 +2,10 @@
 ChangeLog
 =========
 
-1.0.5 (2026-05-11)
+1.0.5 (2026-05-13)
 ------------------
 
+- BUGFIX: fix "claudex -C install|update" by correctly passing options -s (sudo) to capsula
 - BUGFIX: use "node" inside container instead of full path to Node executable
 - BUGFIX: correctly pass environment to container processes
 - BUGFIX: remove incorrect Capsula environment check

@@ -290,34 +290,34 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
     /*  dispatch according to host/container mode  */
     if (capsula) {
         info("update Debian GNU/Linux operating system")
-        await self("internal", "capsula", "sudo", "-E", "apt", "update", "-qq")
-        await self("internal", "capsula", "sudo", "-E", "apt", "upgrade", "-qq", "-y")
+        await self("internal", "capsula", "-s", "sudo", "-E", "apt", "update", "-qq")
+        await self("internal", "capsula", "-s", "sudo", "-E", "apt", "upgrade", "-qq", "-y")
 
         info("install Tmux / LazyGit / Git")
-        await self("internal", "capsula", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lazygit", "git")
+        await self("internal", "capsula", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lazygit", "git")
 
         info("install Node.js")
-        await self("internal", "capsula", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
-        await self("internal", "capsula", "sudo", "-E", "apt", "install", "-qq", "-y", "nodejs")
-        await self("internal", "capsula", "sudo", "-E", "apt", "install", "-qq", "-y", "binutils", "gcc", "g++", "make")
+        await self("internal", "capsula", "-s", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
+        await self("internal", "capsula", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "nodejs")
+        await self("internal", "capsula", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "binutils", "gcc", "g++", "make")
 
         info("install Claude Code")
         await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash`)
 
         info("install ANSI-Recolor")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
 
         info("install TypeScript LS")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
 
         info("install CodeBurn")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
 
         info("install ASE")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "@rse/ase")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "@rse/ase")
 
         info("install Claude wrapper")
-        await self("internal", "capsula", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
+        await self("internal", "capsula", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
 
         /*  prune obsolete versions only after successful install  */
         await self("internal", "capsula", "bash", "-c",
@@ -473,26 +473,26 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
     /*  dispatch according to host/container mode  */
     if (capsula) {
         info("update Debian GNU/Linux operating system")
-        await self("internal", "capsula", "sudo", "apt", "update", "-qq")
-        await self("internal", "capsula", "sudo", "apt", "upgrade", "-qq", "-y")
+        await self("internal", "capsula", "-s", "sudo", "apt", "update", "-qq")
+        await self("internal", "capsula", "-s", "sudo", "apt", "upgrade", "-qq", "-y")
 
         info("update Claude Code")
         await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update`)
 
         info("update ANSI-Recolor")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
 
         info("update TypeScript LS")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
 
         info("update CodeBurn")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
 
         info("update ASE")
-        await self("internal", "capsula", "sudo", "-E", "npm", "install", "-y", "-g", "@rse/ase")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "@rse/ase")
 
         info("update Claude wrapper")
-        await self("internal", "capsula", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
+        await self("internal", "capsula", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
     }
     else {
         info("update Tmux")
