@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.0.6 (2026-05-13)
+------------------
+
+- BUGFIX: do not assume path to Node exists inside container again
+
 1.0.5 (2026-05-13)
 ------------------
 
