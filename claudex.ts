@@ -600,7 +600,7 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
         /*  ASE-specific bind-keys (only when "-A" is in effect)  */
         conf +=
             "bind-key q display-popup -E -w 95% -h 95% -T \"─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶\" claudex internal ase-task-edit\n" +
-            "bind-key t send-keys \"/ase:ase-meta-task \"\n" +
+            "bind-key t send-keys \"/ase:ase-task-id \"\n" +
             "bind-key p send-keys \"/ase:ase-meta-persona \"\n"
     }
     if (isPsmux()) {
