@@ -61,7 +61,7 @@ Installation
 
 ```sh
 # initially
-$ npm install -h @rse/claudex
+$ npm install -g @rse/claudex
 $ claudex [-C/--capsula] install
 
 # regularly
