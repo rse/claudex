@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.0.7 (2026-05-20)
+------------------
+
+- IMPROVEMENT: add support for `@ase_agent_status` variable
+
 1.0.6 (2026-05-13)
 ------------------
 
