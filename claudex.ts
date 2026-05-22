@@ -380,9 +380,9 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             install: {
                 "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
                 "windows:choco":  "choco install -y --accept-license --no-progress nodejs",
-                "macos:ports":    "sudo port -N install nodejs24 npm11",
+                "macos:ports":    "sudo port -N install nodejs26 npm11",
                 "macos:brew":     "sudo brew install node",
-                "linux:apt":      "curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - && sudo apt install -y nodejs",
+                "linux:apt":      "curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash - && sudo apt install -y nodejs",
                 "linux:apk":      "sudo apk add --no-interactive nodejs npm"
             }
         })
