@@ -529,7 +529,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         executeCommand({
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress nodejs",
-            "macos:ports":    "sudo port -N upgrade nodejs24 npm11",
+            "macos:ports":    "sudo port -N upgrade nodejs26 npm11",
             "macos:brew":     "sudo brew upgrade node",
             "linux:apt":      "sudo apt install --only-upgrade -y nodejs",
             "linux:apk":      "sudo apk upgrade --no-interactive nodejs npm"
