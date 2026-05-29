@@ -80,6 +80,11 @@ $ claudex
     [...options...]        # arbitrary Claude Code options
 ```
 
+```sh
+#   example: run Claude Code with Gemma 4 31B MTP under Ollama
+$ CLAUDE_MODEL="ollama:/gemma4:31b-coding-mtp-bf16?context=262K" claudex -T -R -A
+```
+
 See Also
 --------
 
