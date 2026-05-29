@@ -1000,6 +1000,9 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         env.DISABLE_LOGIN_COMMAND            = "1"
         env.DISABLE_LOGOUT_COMMAND           = "1"
     }
+    else
+        throw new Error(`invalid CLAUDE_MODEL "${claudeModel}" ` +
+            "(supports only: \"ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]\"")
 
     /*  override ASE configuration (for its diagram rendering)  */
     if (opts.ase) {
