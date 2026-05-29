@@ -2,10 +2,13 @@
 ChangeLog
 =========
 
-1.0.8 (2026-05-23)
+1.0.8 (2026-05-29)
 ------------------
 
+- IMPROVEMENT: document Ollama `CLAUDE_MODEL` usage example in README
+- BUGFIX: validate `CLAUDE_MODEL` and throw on invalid (non-empty) value
 - UPDATE: upgrade to Node 26 (once again)
+- UPDATE: upgrade NPM dependencies
 
 1.0.7 (2026-05-22)
 ------------------
