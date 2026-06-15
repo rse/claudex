@@ -81,8 +81,13 @@ $ claudex
 ```
 
 ```sh
-#   example: run Claude Code with Gemma 4 31B MTP under Ollama
+#   example: run Claude Code with Gemma 4 31B MTP under local Ollama
 $ CLAUDE_MODEL="ollama:/gemma4:31b-coding-mtp-bf16?context=262K" claudex -T -R -A
+```
+
+```sh
+#   example: run Claude Code with Google Gemini 3.5 Flash via remote OpenRouter
+$ CLAUDE_MODEL="openrouter:google/gemini-3.5-flash?context=1000000" claudex -T -R -A
 ```
 
 See Also
