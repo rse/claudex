@@ -2,6 +2,12 @@
 ChangeLog
 =========
 
+1.0.9 (2026-06-15)
+------------------
+
+- FEATURE: add support for OpenRouter-based LLM usage via `openrouter:` `CLAUDE_MODEL`
+- IMPROVEMENT: support text selection in `tmux` fullscreen mode via `ansi-recolor.conf`
+
 1.0.8 (2026-05-29)
 ------------------
 
