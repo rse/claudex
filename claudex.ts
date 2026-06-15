@@ -994,15 +994,51 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
         env.ANTHROPIC_DEFAULT_OPUS_MODEL     = model
         env.ANTHROPIC_DEFAULT_SONNET_MODEL   = model
+        env.CLAUDE_CODE_SUBAGENT_MODEL       = model
         env.CLAUDE_CODE_ATTRIBUTION_HEADER   = "0"
         env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
+        env.DISABLE_LOGIN_COMMAND            = "1"
+        env.DISABLE_LOGOUT_COMMAND           = "1"
+    }
+    else if (/^openrouter:/.test(claudeModel)) {
+        /*  parse openrouter:<model>[?[context=<size>],[capabilities=<list>]]  */
+        const remainder = claudeModel.slice("openrouter:".length)
+        const qIdx = remainder.indexOf("?")
+        const model = qIdx >= 0 ? remainder.slice(0, qIdx) : remainder
+        if (model === "")
+            fatal("invalid CLAUDE_MODEL: missing model name in " +
+                `"${claudeModel}" (expected: openrouter:<model>[?...])`)
+        let context = "200k"
+        let capabilities = ""
+        if (qIdx >= 0) {
+            const query = remainder.slice(qIdx + 1)
+            for (const pair of query.split(",")) {
+                const eq = pair.indexOf("=")
+                const key = eq >= 0 ? pair.slice(0, eq) : pair
+                const val = eq >= 0 ? pair.slice(eq + 1) : ""
+                if (key === "context")           context      = val
+                else if (key === "capabilities") capabilities = val
+            }
+        }
+
+        /*  override Claude Code configuration  */
+        env.ANTHROPIC_API_KEY                = ""
+        env.ANTHROPIC_AUTH_TOKEN             = process.env.OPENROUTER_API_KEY
+        env.ANTHROPIC_BASE_URL               = "https://openrouter.ai/api"
+        env.ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES = capabilities
+        env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
+        env.ANTHROPIC_DEFAULT_OPUS_MODEL     = model
+        env.ANTHROPIC_DEFAULT_SONNET_MODEL   = model
         env.CLAUDE_CODE_SUBAGENT_MODEL       = model
+        env.CLAUDE_CODE_ATTRIBUTION_HEADER   = "0"
+        env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
         env.DISABLE_LOGIN_COMMAND            = "1"
         env.DISABLE_LOGOUT_COMMAND           = "1"
     }
     else if (claudeModel !== "")
         throw new Error(`invalid CLAUDE_MODEL "${claudeModel}" ` +
-            "(supports only: \"ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]\"")
+            "(supports only: \"ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]\" " +
+            "and \"openrouter:<model>[?[context=<size>],[capabilities=<list>]]\"")
 
     /*  override ASE configuration (for its diagram rendering)  */
     if (opts.ase) {
