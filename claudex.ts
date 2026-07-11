@@ -619,6 +619,17 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
             "bind-key s display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Shell )▶\"                     claudex internal shell\n" +
             (opts.ase ? "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" : "")
     }
+    /*  propagate model-selection environment variables into the tmux
+        server's global environment, so that they survive into every pane
+        (tmux does not carry arbitrary variables across the client/server
+        boundary -- only those listed in "update-environment" -- hence the
+        externally set CLAUDE_MODEL/OPENROUTER_API_KEY would otherwise be
+        lost before actionDefault reads them)  */
+    for (const name of [ "CLAUDE_MODEL", "OPENROUTER_API_KEY" ]) {
+        const val = process.env[name]
+        if (val !== undefined && val !== "")
+            conf += `set-environment -g ${name} ${shQ.quote([ val ])}\n`
+    }
     conf = conf.replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
     fs.writeFileSync(confFile, conf, { mode: 0o600 })
