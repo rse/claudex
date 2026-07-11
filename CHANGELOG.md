@@ -2,6 +2,13 @@
 ChangeLog
 =========
 
+1.0.10 (2026-07-11)
+-------------------
+
+- IMPROVEMENT: provide statusline via `ase setup statusline`
+- IMPROVEMENT: add more usage examples to README
+- BUGFIX: fix `CLAUDE_MODEL` passing into tmux session
+
 1.0.9 (2026-06-15)
 ------------------
 
