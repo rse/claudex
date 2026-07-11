@@ -1093,15 +1093,6 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             ]
         }
     } as Record<string, unknown>
-    if (opts.ase) {
-        claudeSettings = deepmerge(claudeSettings, {
-            "statusLine": {
-                "type": "command",
-                "command": "ase statusline -w 0 -m 2 '<blue>%u</blue> <red>%p</red> <black>%T</black> %s' '%m %e %t' '%P %c'",
-                "padding": 0
-            }
-        })
-    }
     if (opts.tmux) {
         claudeSettings = deepmerge(claudeSettings, {
             "env": {
@@ -1150,7 +1141,7 @@ const actionHelp = (): never => {
         "  -C, --capsula        execute Claude Code inside a Capsula sandbox container\n" +
         "  -T, --tmux [session] wrap Claude Code in a Tmux terminal multiplexing session (optional session name)\n" +
         "  -R, --recolor        wrap Claude Code with ANSI recoloring for improved theming\n" +
-        "  -A, --ase            enable ASE-specific Claude Code statusline and ASE_* environment variables\n" +
+        "  -A, --ase            enable ASE-specific ASE_* environment variables and Tmux settings\n" +
         "\n" +
         "claudeX extension subcommands (honored before claude):\n" +
         "  install              install host-side or in-container dependencies\n" +
@@ -1245,7 +1236,7 @@ const main = async (): Promise<void> => {
         .option("-C, --capsula",        "execute Claude Code inside a Capsula sandbox container")
         .option("-T, --tmux [session]", "wrap Claude Code in a Tmux terminal multiplexing session (optional session name)")
         .option("-R, --recolor",        "wrap Claude Code with ANSI recoloring for improved theming")
-        .option("-A, --ase",            "enable ASE-specific Claude Code statusline and ASE_* environment variables")
+        .option("-A, --ase",            "enable ASE-specific ASE_* environment variables and Tmux settings")
         .argument("[args...]",          "arguments passed unparsed to Claude Code")
         .action((args: string[], opts: TopOpts) => {
             actionDefault(opts, args)
