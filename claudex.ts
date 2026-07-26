@@ -305,7 +305,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash`)
 
         info("install ANSI-Recolor")
-        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=node-pty,tty-attr", "ansi-recolor")
 
         info("install TypeScript LS")
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
@@ -391,9 +391,9 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         ensureTool("ansi-recolor", {
             hint: "https://github.com/rse/ansi-recolor",
             install: {
-                "windows:*": "npm install -g ansi-recolor",
-                "macos:*":   "sudo npm install -g ansi-recolor",
-                "linux:*":   "sudo npm install -g ansi-recolor"
+                "windows:*": "npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor",
+                "macos:*":   "sudo npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor",
+                "linux:*":   "sudo npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor"
             }
         })
 
@@ -1010,6 +1010,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
         env.DISABLE_LOGIN_COMMAND            = "1"
         env.DISABLE_LOGOUT_COMMAND           = "1"
+        env.ENABLE_TOOL_SEARCH               = "auto"
     }
     else if (/^openrouter:/.test(claudeModel)) {
         /*  parse openrouter:<model>[?[context=<size>],[capabilities=<list>]]  */
@@ -1045,6 +1046,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
         env.DISABLE_LOGIN_COMMAND            = "1"
         env.DISABLE_LOGOUT_COMMAND           = "1"
+        env.ENABLE_TOOL_SEARCH               = "auto"
     }
     else if (claudeModel !== "")
         throw new Error(`invalid CLAUDE_MODEL "${claudeModel}" ` +
