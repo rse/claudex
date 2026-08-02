@@ -160,26 +160,26 @@ const ensureTool = (tool: string | string[], options: {
     optional?: boolean
 } = {}): void => {
     const tools = typeof tool === "string" ? [ tool ] : tool
-    for (const tool of tools) {
-        let r = findTool(tool)
+    for (const toolName of tools) {
+        let r = findTool(toolName)
         if (r === null && options.install) {
             const rc = executeCommand(options.install)
             if (rc !== 0) {
                 if (options.optional)
                     continue
-                fatal(`failed to install required tool "${tool}" (exit ${rc})` +
+                fatal(`failed to install required tool "${toolName}" (exit ${rc})` +
                     (options.hint !== undefined ? ` -- hint: ${options.hint}` : ""))
             }
-            r = findTool(tool)
+            r = findTool(toolName)
         }
         if (r !== null)
             continue
         if (options.optional)
             continue
         if (options.hint !== undefined)
-            fatal(`required tool "${tool}" not found in $PATH -- hint: ${options.hint}`)
+            fatal(`required tool "${toolName}" not found in $PATH -- hint: ${options.hint}`)
         else
-            fatal(`required tool "${tool}" not found in $PATH`)
+            fatal(`required tool "${toolName}" not found in $PATH`)
     }
 }
 
