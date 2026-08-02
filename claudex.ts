@@ -340,7 +340,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e psmux",
                 "windows:choco":  "choco install -y --accept-license --no-progress psmux",
                 "macos:ports":    "sudo port -N install tmux",
-                "macos:brew":     "sudo brew install tmux",
+                "macos:brew":     "brew install tmux",
                 "linux:apt":      "sudo apt install -y tmux",
                 "linux:apk":      "sudo apk add --no-interactive tmux"
             }
@@ -354,7 +354,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
                 "windows:choco":  "choco install -y --accept-license --no-progress lazygit",
                 "macos:ports":    "sudo port -N install lazygit",
-                "macos:brew":     "sudo brew install lazygit",
+                "macos:brew":     "brew install lazygit",
                 "linux:apt":      "sudo apt install -y lazygit",
                 "linux:apk":      "sudo apk add --no-interactive lazygit"
             }
@@ -368,7 +368,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git",
                 "windows:choco":  "choco install -y --accept-license --no-progress git",
                 "macos:ports":    "sudo port -N install git",
-                "macos:brew":     "sudo brew install git",
+                "macos:brew":     "brew install git",
                 "linux:apt":      "sudo apt install -y git",
                 "linux:apk":      "sudo apk add --no-interactive git"
             }
@@ -381,7 +381,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
                 "windows:choco":  "choco install -y --accept-license --no-progress nodejs",
                 "macos:ports":    "sudo port -N install nodejs26 npm11",
-                "macos:brew":     "sudo brew install node",
+                "macos:brew":     "brew install node",
                 "linux:apt":      "curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash - && sudo apt install -y nodejs",
                 "linux:apk":      "sudo apk add --no-interactive nodejs npm"
             }
@@ -500,7 +500,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e psmux",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress psmux",
             "macos:ports":    "sudo port -N upgrade tmux",
-            "macos:brew":     "sudo brew upgrade tmux",
+            "macos:brew":     "brew upgrade tmux",
             "linux:apt":      "sudo apt install --only-upgrade -y tmux",
             "linux:apk":      "sudo apk upgrade --no-interactive tmux"
         })
@@ -510,7 +510,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress lazygit",
             "macos:ports":    "sudo port -N upgrade lazygit",
-            "macos:brew":     "sudo brew upgrade lazygit",
+            "macos:brew":     "brew upgrade lazygit",
             "linux:apt":      "sudo apt install --only-upgrade -y lazygit",
             "linux:apk":      "sudo apk upgrade --no-interactive lazygit"
         })
@@ -520,7 +520,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress git",
             "macos:ports":    "sudo port -N upgrade git",
-            "macos:brew":     "sudo brew upgrade git",
+            "macos:brew":     "brew upgrade git",
             "linux:apt":      "sudo apt install --only-upgrade -y git",
             "linux:apk":      "sudo apk upgrade --no-interactive git"
         })
@@ -530,7 +530,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress nodejs",
             "macos:ports":    "sudo port -N upgrade nodejs26 npm11",
-            "macos:brew":     "sudo brew upgrade node",
+            "macos:brew":     "brew upgrade node",
             "linux:apt":      "sudo apt install --only-upgrade -y nodejs",
             "linux:apk":      "sudo apk upgrade --no-interactive nodejs npm"
         })
