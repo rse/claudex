@@ -681,9 +681,8 @@ const actionInternalShell = (_opts: TopOpts, args: string[]): never => {
 /*  action: internal "ase-task-edit" -- edit the ASE task associated with the current tmux pane  */
 const actionInternalAseTaskEdit = async (_opts: TopOpts): Promise<void> => {
     ensureTool("ase")
-    let tid = ""
     const r1 = execaSync("tmux", [ "display-message", "-p", "#{@ase_task_id}" ], { reject: false })
-    tid = (r1.stdout ?? "").trim()
+    const tid = (r1.stdout ?? "").trim()
     if (tid !== "")
         execInherit("ase", [ "task", "edit", tid ])
     else {
