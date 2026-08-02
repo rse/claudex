@@ -17,16 +17,16 @@
     "bin":              { "claudex": "claudex.js" },
     "dependencies": {
         "which":                       "7.0.0",
-        "execa":                       "10.0.0",
-        "chalk":                       "5.6.2",
+        "execa":                       "10.0.1",
+        "chalk":                       "6.0.0",
         "commander":                   "15.0.0",
         "deepmerge":                   "4.3.1",
-        "shescape":                    "3.0.1",
+        "shescape":                    "3.0.2",
         "shell-quote":                 "1.10.0"
     },
     "devDependencies": {
         "typescript":                  "6.0.3",
-        "@types/node":                 "26.1.1",
+        "@types/node":                 "26.1.2",
         "@types/which":                "3.0.4",
         "@types/shell-quote":          "1.7.5",
 
@@ -38,7 +38,7 @@
         "eslint-plugin-promise":       "7.3.0",
         "eslint-plugin-import":        "2.32.0",
         "neostandard":                 "0.13.0",
-        "globals":                     "17.7.0",
+        "globals":                     "17.8.0",
         "shx":                         "0.4.0"
     },
     "engines": {
