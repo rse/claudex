@@ -1013,6 +1013,8 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         env.ENABLE_TOOL_SEARCH               = "auto"
     }
     else if (/^openrouter:/.test(claudeModel)) {
+        if (!process.env.OPENROUTER_API_KEY)
+            fatal("CLAUDE_MODEL uses \"openrouter:\" but the OPENROUTER_API_KEY environment variable is not set")
         /*  parse openrouter:<model>[?[context=<size>],[capabilities=<list>]]  */
         const remainder = claudeModel.slice("openrouter:".length)
         const qIdx = remainder.indexOf("?")
