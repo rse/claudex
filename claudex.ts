@@ -302,7 +302,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "binutils", "gcc", "g++", "make")
 
         info("install Claude Code")
-        await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash`)
+        await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -fsSL https://claude.ai/install.sh | bash`)
 
         info("install ANSI-Recolor")
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=node-pty,tty-attr", "ansi-recolor")
@@ -432,7 +432,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             /*  run installation script  */
             ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
             ensureTool("curl", { hint: "https://curl.se/" })
-            await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -kfsSL https://claude.ai/install.sh | bash` ], {
+            await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -fsSL https://claude.ai/install.sh | bash` ], {
                 stdio: "inherit", reject: false
             })
 
