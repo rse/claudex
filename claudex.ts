@@ -1197,7 +1197,7 @@ const main = async (): Promise<void> => {
                 invoked with any of these options, as the corresponding
                 non-interactive or session-related modes are incompatible
                 with wrapping claude inside a Tmux session  */
-            const noTmuxOpts = [ "-p" ]
+            const noTmuxOpts = [ "-p", "--print" ]
             const skipTmux = topArgs.some((a) => noTmuxOpts.includes(a))
             const filtered: string[] = []
             for (let i = 0; i < tokens.length; i++) {
