@@ -1072,7 +1072,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
                 colorMode = "ansi256"
             else if (depth >= 4)
                 colorMode = "ansi16"
-            env.ASE_TERM_COLORS = `${colorMode}`
+            env.ASE_TERM_COLORS = colorMode
         }
         if (args.includes("-p") || args.includes("--print"))
             env.ASE_HEADLESS = "true"
