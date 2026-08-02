@@ -1052,7 +1052,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
     else if (claudeModel !== "")
         fatal(`invalid CLAUDE_MODEL "${claudeModel}" ` +
             "(supports only: \"ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]\" " +
-            "and \"openrouter:<model>[?[context=<size>],[capabilities=<list>]]\"")
+            "and \"openrouter:<model>[?[context=<size>],[capabilities=<list>]]\")")
 
     /*  override ASE configuration (for its diagram rendering)  */
     if (opts.ase) {
