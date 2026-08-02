@@ -480,7 +480,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update`)
 
         info("update ANSI-Recolor")
-        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "ansi-recolor")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=node-pty,tty-attr", "ansi-recolor")
 
         info("update TypeScript LS")
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
@@ -537,9 +537,9 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
 
         info("update ANSI-Recolor")
         executeCommand({
-            "windows:*": "npm install -g ansi-recolor",
-            "macos:*":   "sudo npm install -g ansi-recolor",
-            "linux:*":   "sudo npm install -g ansi-recolor"
+            "windows:*": "npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor",
+            "macos:*":   "sudo npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor",
+            "linux:*":   "sudo npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor"
         })
 
         info("update TypeScript-Language-Server")
