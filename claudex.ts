@@ -334,7 +334,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
 
         info("install Tmux")
         ensureTool("tmux", {
-            hint: platform.match(/^windows:/) ?
+            hint: /^windows:/.test(platform) ?
                 "https://github.com/psmux/psmux/" :
                 "https://github.com/tmux/tmux/",
             install: {
