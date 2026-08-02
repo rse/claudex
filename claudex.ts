@@ -854,10 +854,9 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
             session = opts.tmux
         else
             session = detectSessionName()
-        const rest = args
 
         /*  build the in-pane self-invocation  */
-        const inPane = shQ.quote([ "node" /* process.execPath is not valid inside container! */, selfPathJS, ...innerFlags, ...rest ])
+        const inPane = shQ.quote([ "node" /* process.execPath is not valid inside container! */, selfPathJS, ...innerFlags, ...args ])
 
         /*  propagate the chosen pass-through flags to subsequent in-pane
             "claudex" invocations via the CLAUDEX_FLAGS env var (honored by
