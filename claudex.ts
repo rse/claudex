@@ -59,7 +59,7 @@ const findTool = (tool: string): string | null => {
     if (process.platform === "win32") {
         const r2 = execaSync("where", [ tool ], { reject: false, windowsHide: true })
         if ((r2.exitCode ?? 1) === 0) {
-            const line = (r2.stdout ?? "").toString().split(/\r?\n/)[0].trim()
+            const line = (r2.stdout ?? "").split(/\r?\n/)[0].trim()
             if (line !== "")
                 return line
         }
