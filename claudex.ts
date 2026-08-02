@@ -246,6 +246,7 @@ const pruneClaudeVersions = (active: string | null): void => {
             fs.rmSync(path.join(versionsDir, f), { recursive: true, force: true })
         }
         catch (_e) {
+            /*  ignore removal failures (best-effort pruning)  */
         }
     }
 }
