@@ -1231,7 +1231,7 @@ const main = async (): Promise<void> => {
     program
         .name("claudex")
         .description("Claude Code eXtended")
-        .version(JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf8")).version, "-V, --version")
+        .version((JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf8")) as { version: string }).version, "-V, --version")
         .enablePositionalOptions()
         .passThroughOptions()
         .allowUnknownOption()
