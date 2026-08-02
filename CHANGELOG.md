@@ -2,6 +2,18 @@
 ChangeLog
 =========
 
+1.0.12 (2026-08-02)
+-------------------
+
+- BUGFIX: allow NPM scripts for "ansi-recolor" (again)
+- UPDATE: upgrade NPM dependencies
+
+1.0.11 (2026-07-26)
+-------------------
+
+- BUGFIX: allow NPM scripts for "ansi-recolor"
+- UPDATE: upgrade NPM dependencies
+
 1.0.10 (2026-07-11)
 -------------------
 
