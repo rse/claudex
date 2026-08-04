@@ -1155,6 +1155,20 @@ const actionHelp = (): never => {
     process.exit(0)
 }
 
+/*  action: top-level "-v/-V/--version"  */
+const actionVersion = (): never => {
+    /*  run "claude --version"  */
+    process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
+    ensureTool("claude")
+    const claudeBin = path.join(HOME, ".local/bin/claude")
+    execaSync(claudeBin, [ "--version" ], { reject: false, stdio: [ "ignore", "inherit", "inherit" ] })
+
+    /*  append our claudeX extension information  */
+    const version = (JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf8")) as { version: string }).version
+    process.stdout.write(`${version} (claudeX)\n`)
+    process.exit(0)
+}
+
 /*  the main procedure -- builds and dispatches according to options and commands  */
 const main = async (): Promise<void> => {
     /*  honor the external CLAUDEX_FLAGS environment variable as a way to set
@@ -1216,8 +1230,8 @@ const main = async (): Promise<void> => {
         }
     }
 
-    /*  intercept top-level "-h/--help" before commander grabs it, so we can
-        pass-through to "claude --help" and append our extension info  */
+    /*  intercept top-level "-h/--help" and "-v/-V/--version" before commander
+        grabs them, so we can pass-through to "claude" and append our extension info  */
     const topArgs = process.argv.slice(2)
     const firstNonFlag = topArgs.findIndex((a) => !a.startsWith("-"))
     const headFlags = firstNonFlag < 0 ? topArgs : topArgs.slice(0, firstNonFlag)
@@ -1225,13 +1239,15 @@ const main = async (): Promise<void> => {
     if ((headFlags.includes("-h") || headFlags.includes("--help"))
         && subcmd !== "install" && subcmd !== "update" && subcmd !== "internal")
         actionHelp()
+    if ((headFlags.includes("-v") || headFlags.includes("-V") || headFlags.includes("--version"))
+        && subcmd !== "install" && subcmd !== "update" && subcmd !== "internal")
+        actionVersion()
 
     /*  dispatch main command  */
     const program = new Command()
     program
         .name("claudex")
         .description("Claude Code eXtended")
-        .version((JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf8")) as { version: string }).version, "-V, --version")
         .enablePositionalOptions()
         .passThroughOptions()
         .allowUnknownOption()

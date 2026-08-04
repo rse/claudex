@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.0.13 (2026-08-04)
+-------------------
+
+- IMPROVEMENT: pass-through --version option to Claude Code and just extend with own version information
+
 1.0.12 (2026-08-02)
 -------------------
 
