@@ -26,6 +26,7 @@ gui:
     commitHashLength: 0
     expandFocusedSidePanel: true
     expandedSidePanelWeight: 4
+    shrinkSidePanelsToContent: false
     theme:
         selectedLineBgColor:
             - reverse
@@ -36,15 +37,33 @@ gui:
             - white
         optionsTextColor:
             - blue
+    sidePanels:
+        - [ files ]
+        - [ worktrees ]
+        - [ branches, submodules ]
+        - [ commits, reflog, tags ]
+        - [ stash ]
+    spinner:
+        frames:
+            - ●∙∙∙
+            - ∙●∙∙
+            - ∙∙●∙
+            - ∙∙∙●
+            - ∙∙●∙
+            - ∙●∙∙
+        rate: 180
 
 git:
     autoFetch: false
     autoRefresh: true
+    pagers:
+        - pager: delta --dark --paging=never
+
 refresher:
-    refreshInterval: 4
+    refreshInterval: 2
 
 update:
-    method: mever
+    method: never
     days: 1
 
 reporting: "off"
