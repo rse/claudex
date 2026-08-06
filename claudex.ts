@@ -139,7 +139,7 @@ const execInherit = (file: string, args: string[], opts: { env?: Env } = {}): ne
 const executeCommand = (config: { [ platform: string ]: string[] | string }) => {
     const platform = detectPlatform()
     const osName = platform.split(":")[0]
-    const command = config[platform] ?? config[`${osName}:*`]
+    const command = config[platform] ?? config[`${osName}:*`] ?? config["*"]
     if (command === undefined)
         fatal(`no command configured for platform "${platform}"`)
     const cmd = command instanceof Array ? command : command.split(/\s+/)
@@ -152,6 +152,42 @@ const executeCommand = (config: { [ platform: string ]: string[] | string }) => 
     })
     return result.exitCode
 }
+
+/*  helper to determine whether a global NPM installation requires sudo(8),
+    i.e., whether the target directories of the NPM global prefix are not
+    writable by us. The result is cached after the first call.  */
+let npmNeedsSudoCached: boolean | null = null
+const npmNeedsSudo = (): boolean => {
+    if (npmNeedsSudoCached !== null)
+        return npmNeedsSudoCached
+    npmNeedsSudoCached = false
+    if (process.platform === "win32" || (process.getuid?.() ?? 0) === 0 || findTool("sudo") === null)
+        return npmNeedsSudoCached
+    const r = execaSync("npm", [ "prefix", "-g" ], { reject: false })
+    const prefix = (r.stdout ?? "").trim()
+    if ((r.exitCode ?? 1) !== 0 || prefix === "") {
+        /*  on a failed detection stay with the conservative variant  */
+        npmNeedsSudoCached = true
+        return npmNeedsSudoCached
+    }
+    npmNeedsSudoCached = ![ path.join(prefix, "lib", "node_modules"), path.join(prefix, "bin") ].every((dir) => {
+        /*  fall back to the nearest already existing ancestor directory  */
+        while (!fs.existsSync(dir) && path.dirname(dir) !== dir)
+            dir = path.dirname(dir)
+        try {
+            fs.accessSync(dir, fs.constants.W_OK)
+            return true
+        }
+        catch (_e) {
+            return false
+        }
+    })
+    return npmNeedsSudoCached
+}
+
+/*  helper to assemble a global NPM installation command  */
+const npmInstallGlobal = (...args: string[]): string =>
+    `${npmNeedsSudo() ? "sudo " : ""}npm install -g ${args.join(" ")}`
 
 /*  helper to ensure a tool is available  */
 const ensureTool = (tool: string | string[], options: {
@@ -392,9 +428,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         ensureTool("ansi-recolor", {
             hint: "https://github.com/rse/ansi-recolor",
             install: {
-                "windows:*": "npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor",
-                "macos:*":   "sudo npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor",
-                "linux:*":   "sudo npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor"
+                "*": npmInstallGlobal("--allow-scripts=node-pty,tty-attr", "ansi-recolor")
             }
         })
 
@@ -402,9 +436,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         ensureTool("typescript-language-server", {
             hint: "https://github.com/typescript-language-server/typescript-language-server",
             install: {
-                "windows:*": "npm install -g typescript-language-server",
-                "macos:*":   "sudo npm install -g typescript-language-server",
-                "linux:*":   "sudo npm install -g typescript-language-server"
+                "*": npmInstallGlobal("typescript-language-server")
             }
         })
 
@@ -412,9 +444,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         ensureTool("codeburn", {
             hint: "https://www.npmjs.com/package/codeburn",
             install: {
-                "windows:*": "npm install -g codeburn",
-                "macos:*":   "sudo npm install -g codeburn",
-                "linux:*":   "sudo npm install -g codeburn"
+                "*": npmInstallGlobal("codeburn")
             }
         })
 
@@ -422,9 +452,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         ensureTool("ase", {
             hint: "https://ase.tools",
             install: {
-                "windows:*": "npm install -g @rse/ase",
-                "macos:*":   "sudo npm install -g @rse/ase",
-                "linux:*":   "sudo npm install -g @rse/ase"
+                "*": npmInstallGlobal("@rse/ase")
             }
         })
 
@@ -538,30 +566,22 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
 
         info("update ANSI-Recolor")
         executeCommand({
-            "windows:*": "npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor",
-            "macos:*":   "sudo npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor",
-            "linux:*":   "sudo npm install -g --allow-scripts=node-pty,tty-attr ansi-recolor"
+            "*": npmInstallGlobal("--allow-scripts=node-pty,tty-attr", "ansi-recolor")
         })
 
         info("update TypeScript-Language-Server")
         executeCommand({
-            "windows:*": "npm install -g typescript-language-server",
-            "macos:*":   "sudo npm install -g typescript-language-server",
-            "linux:*":   "sudo npm install -g typescript-language-server"
+            "*": npmInstallGlobal("typescript-language-server")
         })
 
         info("update CodeBurn")
         executeCommand({
-            "windows:*": "npm install -g codeburn",
-            "macos:*":   "sudo npm install -g codeburn",
-            "linux:*":   "sudo npm install -g codeburn"
+            "*": npmInstallGlobal("codeburn")
         })
 
         info("update ASE")
         executeCommand({
-            "windows:*": "npm install -g @rse/ase",
-            "macos:*":   "sudo npm install -g @rse/ase",
-            "linux:*":   "sudo npm install -g @rse/ase"
+            "*": npmInstallGlobal("@rse/ase")
         })
 
         info("update Claude Code")
