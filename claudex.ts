@@ -79,48 +79,95 @@ const isPsmux = (): boolean => {
     return isPsmuxCached
 }
 
+/*  the known package managers, in the order of their detection preference
+    (on Fedora "yum" is just an alias for "dnf", hence "dnf" comes first)  */
+const packageManagers: { name: string, plat: string, tool: string, key: string }[] = [
+    { name: "winget", plat: "win32",  tool: "winget", key: "windows:winget" },
+    { name: "choco",  plat: "win32",  tool: "choco",  key: "windows:choco"  },
+    { name: "ports",  plat: "darwin", tool: "port",   key: "macos:ports"    },
+    { name: "brew",   plat: "darwin", tool: "brew",   key: "macos:brew"     },
+    { name: "apt",    plat: "linux",  tool: "apt",    key: "linux:apt"      },
+    { name: "dnf",    plat: "linux",  tool: "dnf",    key: "linux:dnf"      },
+    { name: "yum",    plat: "linux",  tool: "yum",    key: "linux:yum"      },
+    { name: "zypper", plat: "linux",  tool: "zypper", key: "linux:zypper"   },
+    { name: "pacman", plat: "linux",  tool: "pacman", key: "linux:pacman"   },
+    { name: "apk",    plat: "linux",  tool: "apk",    key: "linux:apk"      }
+]
+
 /*  helper for detecting the platform and package manager combination  */
 const detectPlatform = (): string => {
-    /*  helper function for finding a tool in PATH  */
-    const has = (tool: string): boolean =>
-        findTool(tool) !== null
-
     /*  honor explicit override via CLAUDEX_PKG (e.g. "brew", "ports", "apt", ...)
         to disambiguate hosts where multiple package managers are installed  */
     const override = process.env.CLAUDEX_PKG ?? ""
     if (override !== "") {
-        const pm: Record<string, { plat: string, tool: string, key: string }> = {
-            winget: { plat: "win32",  tool: "winget", key: "windows:winget" },
-            choco:  { plat: "win32",  tool: "choco",  key: "windows:choco"  },
-            ports:  { plat: "darwin", tool: "port",   key: "macos:ports"    },
-            brew:   { plat: "darwin", tool: "brew",   key: "macos:brew"     },
-            apt:    { plat: "linux",  tool: "apt",    key: "linux:apt"      },
-            apk:    { plat: "linux",  tool: "apk",    key: "linux:apk"      }
-        }
-        const entry = pm[override]
+        const entry = packageManagers.find((pm) => pm.name === override)
         if (entry === undefined)
             return fatal(`unknown CLAUDEX_PKG value "${override}" ` +
-                `(allowed: ${Object.keys(pm).join(", ")})`)
+                `(allowed: ${packageManagers.map((pm) => pm.name).join(", ")})`)
         if (process.platform !== entry.plat)
             return fatal(`CLAUDEX_PKG="${override}" is not valid on platform "${process.platform}"`)
-        if (!has(entry.tool))
+        if (findTool(entry.tool) === null)
             return fatal(`CLAUDEX_PKG="${override}" requested but tool "${entry.tool}" not found in $PATH`)
         return entry.key
     }
-    if (process.platform === "win32" && has("winget"))
-        return "windows:winget"
-    else if (process.platform === "win32" && has("choco"))
-        return "windows:choco"
-    else if (process.platform === "darwin" && has("port"))
-        return "macos:ports"
-    else if (process.platform === "darwin" && has("brew"))
-        return "macos:brew"
-    else if (process.platform === "linux" && has("apt"))
-        return "linux:apt"
-    else if (process.platform === "linux" && has("apk"))
-        return "linux:apk"
-    else
+
+    /*  detect the first available package manager of the current platform  */
+    const entry = packageManagers.find((pm) =>
+        pm.plat === process.platform && findTool(pm.tool) !== null)
+    if (entry === undefined)
         return fatal(`unsupported platform "${process.platform}" or no known package manager found`)
+    return entry.key
+}
+
+/*  helper for detecting the installation prefixes of the macOS package
+    managers, derived from the location of their own driver programs
+    (MacPorts: <prefix>/bin/port, Homebrew: <prefix>/bin/brew).
+    The result is cached after the first call.  */
+let macosPrefixesCached: { key: string, prefix: string }[] | null = null
+const macosPrefixes = (): { key: string, prefix: string }[] => {
+    if (macosPrefixesCached !== null)
+        return macosPrefixesCached
+    macosPrefixesCached = []
+    for (const pm of packageManagers.filter((pm) => pm.plat === "darwin")) {
+        const location = findTool(pm.tool)
+        if (location !== null)
+            macosPrefixesCached.push({ key: pm.key, prefix: path.dirname(path.dirname(location)) })
+    }
+    return macosPrefixesCached
+}
+
+/*  helper for detecting the package manager which provides an already
+    installed tool. On macOS, MacPorts and Homebrew can coexist and each
+    tool can originate from either of them, so the responsible manager is
+    determined by the installation prefix the tool resides in. On all
+    other platforms the single detected package manager applies. A "null"
+    result means the tool is not under control of a package manager.  */
+const detectPlatformForTool = (tool: string): string | null => {
+    if (process.platform !== "darwin" || (process.env.CLAUDEX_PKG ?? "") !== "")
+        return detectPlatform()
+    const location = findTool(tool)
+    if (location === null)
+        return detectPlatform()
+    let target = location
+    try {
+        target = fs.realpathSync(location)
+    }
+    catch (_e) {
+        /*  intentionally ignored  */
+    }
+    const below = (p: string, prefix: string): boolean =>
+        p === prefix || p.startsWith(`${prefix}${path.sep}`)
+    for (const entry of macosPrefixes())
+        if (below(location, entry.prefix) || below(target, entry.prefix))
+            return entry.key
+
+    /*  the tool found in $PATH is none of the managed ones (it can be a
+        manually installed program or a wrapper shadowing the managed one),
+        so still check whether a package manager provides it, too  */
+    for (const entry of macosPrefixes())
+        if (fs.existsSync(path.join(entry.prefix, "bin", tool)))
+            return entry.key
+    return null
 }
 
 /*  helper to spawn a child synchronously inheriting stdio, then exit
@@ -136,8 +183,8 @@ const execInherit = (file: string, args: string[], opts: { env?: Env } = {}): ne
 }
 
 /*  helper to execute a platform-specific command  */
-const executeCommand = (config: { [ platform: string ]: string[] | string }) => {
-    const platform = detectPlatform()
+const executeCommand = (config: { [ platform: string ]: string[] | string }, platformOverride?: string) => {
+    const platform = platformOverride ?? detectPlatform()
     const osName = platform.split(":")[0]
     const command = config[platform] ?? config[`${osName}:*`] ?? config["*"]
     if (command === undefined)
@@ -151,6 +198,17 @@ const executeCommand = (config: { [ platform: string ]: string[] | string }) => 
         windowsHide:  false
     })
     return result.exitCode
+}
+
+/*  helper to update an externally managed tool with exactly the package
+    manager which actually provides it, instead of just the preferred one  */
+const updateTool = (tool: string, config: { [ platform: string ]: string[] | string }) => {
+    const platform = detectPlatformForTool(tool)
+    if (platform === null) {
+        info(`skip update of "${tool}" (not provided by MacPorts or Homebrew)`)
+        return 0
+    }
+    return executeCommand(config, platform)
 }
 
 /*  helper to determine whether a global NPM installation requires sudo(8),
@@ -379,6 +437,10 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "macos:ports":    "sudo port -N install tmux",
                 "macos:brew":     "brew install tmux",
                 "linux:apt":      "sudo apt install -y tmux",
+                "linux:dnf":      "sudo dnf install -y tmux",
+                "linux:yum":      "sudo yum install -y tmux",
+                "linux:zypper":   "sudo zypper --non-interactive install tmux",
+                "linux:pacman":   "sudo pacman -S --needed --noconfirm tmux",
                 "linux:apk":      "sudo apk add --no-interactive tmux"
             }
         })
@@ -393,6 +455,10 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "macos:ports":    "sudo port -N install lazygit",
                 "macos:brew":     "brew install lazygit",
                 "linux:apt":      "sudo apt install -y lazygit",
+                "linux:dnf":      "sudo dnf install -y lazygit",
+                "linux:yum":      "sudo yum install -y lazygit",
+                "linux:zypper":   "sudo zypper --non-interactive install lazygit",
+                "linux:pacman":   "sudo pacman -S --needed --noconfirm lazygit",
                 "linux:apk":      "sudo apk add --no-interactive lazygit"
             }
         })
@@ -407,6 +473,10 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "macos:ports":    "sudo port -N install git",
                 "macos:brew":     "brew install git",
                 "linux:apt":      "sudo apt install -y git",
+                "linux:dnf":      "sudo dnf install -y git",
+                "linux:yum":      "sudo yum install -y git",
+                "linux:zypper":   "sudo zypper --non-interactive install git",
+                "linux:pacman":   "sudo pacman -S --needed --noconfirm git",
                 "linux:apk":      "sudo apk add --no-interactive git"
             }
         })
@@ -420,6 +490,10 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "macos:ports":    "sudo port -N install nodejs26 npm11",
                 "macos:brew":     "brew install node",
                 "linux:apt":      "curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash - && sudo apt install -y nodejs",
+                "linux:dnf":      "sudo dnf install -y nodejs npm",
+                "linux:yum":      "sudo yum install -y nodejs npm",
+                "linux:zypper":   "sudo zypper --non-interactive install nodejs npm",
+                "linux:pacman":   "sudo pacman -S --needed --noconfirm nodejs npm",
                 "linux:apk":      "sudo apk add --no-interactive nodejs npm"
             }
         })
@@ -525,42 +599,58 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
     }
     else {
         info("update Tmux")
-        executeCommand({
+        updateTool("tmux", {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e psmux",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress psmux",
             "macos:ports":    "sudo port -N upgrade tmux",
             "macos:brew":     "brew upgrade tmux",
             "linux:apt":      "sudo apt install --only-upgrade -y tmux",
+            "linux:dnf":      "sudo dnf upgrade -y tmux",
+            "linux:yum":      "sudo yum update -y tmux",
+            "linux:zypper":   "sudo zypper --non-interactive update tmux",
+            "linux:pacman":   "sudo pacman -S --noconfirm tmux",
             "linux:apk":      "sudo apk upgrade --no-interactive tmux"
         })
 
         info("update LazyGit")
-        executeCommand({
+        updateTool("lazygit", {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id JesseDuffield.lazygit",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress lazygit",
             "macos:ports":    "sudo port -N upgrade lazygit",
             "macos:brew":     "brew upgrade lazygit",
             "linux:apt":      "sudo apt install --only-upgrade -y lazygit",
+            "linux:dnf":      "sudo dnf upgrade -y lazygit",
+            "linux:yum":      "sudo yum update -y lazygit",
+            "linux:zypper":   "sudo zypper --non-interactive update lazygit",
+            "linux:pacman":   "sudo pacman -S --noconfirm lazygit",
             "linux:apk":      "sudo apk upgrade --no-interactive lazygit"
         })
 
         info("update Git")
-        executeCommand({
+        updateTool("git", {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id Git.Git --source winget",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress git",
             "macos:ports":    "sudo port -N upgrade git",
             "macos:brew":     "brew upgrade git",
             "linux:apt":      "sudo apt install --only-upgrade -y git",
+            "linux:dnf":      "sudo dnf upgrade -y git",
+            "linux:yum":      "sudo yum update -y git",
+            "linux:zypper":   "sudo zypper --non-interactive update git",
+            "linux:pacman":   "sudo pacman -S --noconfirm git",
             "linux:apk":      "sudo apk upgrade --no-interactive git"
         })
 
         info("update Node.js")
-        executeCommand({
+        updateTool("node", {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress nodejs",
             "macos:ports":    "sudo port -N upgrade nodejs26 npm11",
             "macos:brew":     "brew upgrade node",
             "linux:apt":      "sudo apt install --only-upgrade -y nodejs",
+            "linux:dnf":      "sudo dnf upgrade -y nodejs npm",
+            "linux:yum":      "sudo yum update -y nodejs npm",
+            "linux:zypper":   "sudo zypper --non-interactive update nodejs npm",
+            "linux:pacman":   "sudo pacman -S --noconfirm nodejs npm",
             "linux:apk":      "sudo apk upgrade --no-interactive nodejs npm"
         })
 
