@@ -2,6 +2,17 @@
 ChangeLog
 =========
 
+1.0.15 (2026-08-08)
+-------------------
+
+- IMPROVEMENT: support more package managers
+- IMPROVEMENT: use package manager which was used to install a tool
+
+1.0.14 (2026-08-06)
+-------------------
+
+- BUGFIX: do not use sudo if not really required
+
 1.0.13 (2026-08-04)
 -------------------
 
