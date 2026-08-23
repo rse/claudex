@@ -27,6 +27,7 @@ gui:
     expandFocusedSidePanel: true
     expandedSidePanelWeight: 4
     shrinkSidePanelsToContent: false
+    useHunkModeInStagingView: true
     theme:
         selectedLineBgColor:
             - reverse
