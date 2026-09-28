@@ -40,10 +40,10 @@ gui:
             - blue
     sidePanels:
         - [ files ]
-        - [ worktrees ]
-        - [ branches, submodules ]
-        - [ commits, reflog, tags ]
         - [ stash ]
+        - [ commits, reflog, tags ]
+        - [ branches, submodules ]
+        - [ worktrees ]
     spinner:
         frames:
             - ●∙∙∙
