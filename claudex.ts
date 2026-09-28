@@ -1177,7 +1177,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         }
         if (env.ASE_TERM_COLORS === undefined) {
             let colorMode = "none"
-            const depth = process.stdout.getColorDepth()
+            const depth = process.stdout.isTTY ? process.stdout.getColorDepth() : 1
             if (depth >= 8)
                 colorMode = "ansi256"
             else if (depth >= 4)
