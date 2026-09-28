@@ -2,6 +2,19 @@
 ChangeLog
 =========
 
+1.0.17 (2026-09-28)
+-------------------
+
+- IMPROVEMENT: add more color mappings to ansi-recolor configuration
+- BUGFIX: fix coloring under latest Claude Code
+- BUGFIX: do not break on non-interactive TTYs when determining color depth
+- UPDATE: upgrade NPM dependencies
+
+1.0.16 (2026-08-25)
+-------------------
+
+- UPDATE: upgrade to newer LazyGit configuration (diff renderers, hunk mode in staging view)
+
 1.0.15 (2026-08-08)
 -------------------
 
