@@ -1149,6 +1149,7 @@ const actionDefault = async (opts: TopOpts, args: string[]): Promise<never> => {
         env.DISABLE_LOGIN_COMMAND            = "1"
         env.DISABLE_LOGOUT_COMMAND           = "1"
         env.ENABLE_TOOL_SEARCH               = "auto"
+        env.ENABLE_CLAUDEAI_MCP_SERVERS      = "false"
     }
     else if (/^openrouter:/.test(claudeModel)) {
         if (!process.env.OPENROUTER_API_KEY)
@@ -1188,6 +1189,7 @@ const actionDefault = async (opts: TopOpts, args: string[]): Promise<never> => {
         env.DISABLE_LOGIN_COMMAND            = "1"
         env.DISABLE_LOGOUT_COMMAND           = "1"
         env.ENABLE_TOOL_SEARCH               = "auto"
+        env.ENABLE_CLAUDEAI_MCP_SERVERS      = "false"
     }
     else if (/^codex:/.test(claudeModel)) {
         const model = claudeModel.slice("codex:".length)
@@ -1247,6 +1249,7 @@ const actionDefault = async (opts: TopOpts, args: string[]): Promise<never> => {
         env.DISABLE_LOGIN_COMMAND                      = "1"
         env.DISABLE_LOGOUT_COMMAND                     = "1"
         env.ENABLE_TOOL_SEARCH                         = "auto"
+        env.ENABLE_CLAUDEAI_MCP_SERVERS                = "false"
     }
     else if (claudeModel !== "")
         fatal(`invalid CLAUDE_MODEL "${claudeModel}" ` +
