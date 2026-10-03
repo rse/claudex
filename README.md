@@ -90,6 +90,18 @@ $ CLAUDE_MODEL="ollama:/gemma4:31b-coding-mtp-bf16?context=262K" claudex -T -R -
 $ CLAUDE_MODEL="openrouter:google/gemini-3.5-flash?context=1000000" claudex -T -R -A
 ```
 
+```sh
+#   example: run Claude Code with a Codex model via a local proxy
+$ CLAUDE_MODEL="codex:gpt-6.1-sol[1m]" claudex -T -R -A
+```
+
+Codex mode requires `claude-code-proxy` in `$PATH` with its Codex
+authentication configured. claudeX reuses a healthy proxy at
+`http://127.0.0.1:18765`, or automatically starts
+`claude-code-proxy serve --port 18765 --no-monitor` and waits for readiness.
+The proxy stays running after Claude Code exits so other sessions can reuse it.
+With `-C`, the proxy and its authentication must be available inside the container.
+
 See Also
 --------
 

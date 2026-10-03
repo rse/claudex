@@ -8,6 +8,7 @@
 import * as fs              from "node:fs"
 import * as path            from "node:path"
 import * as os              from "node:os"
+import { spawn }            from "node:child_process"
 import { execa, execaSync } from "execa"
 import which                from "which"
 import chalk                from "chalk"
@@ -179,7 +180,7 @@ const execInherit = (file: string, args: string[], opts: { env?: Env } = {}): ne
         reject:       false,
         windowsHide:  false
     })
-    process.exit(r.exitCode ?? 0)
+    process.exit(r.exitCode ?? 1)
 }
 
 /*  helper to execute a platform-specific command  */
@@ -197,7 +198,7 @@ const executeCommand = (config: { [ platform: string ]: string[] | string }, pla
         reject:       false,
         windowsHide:  false
     })
-    return result.exitCode
+    return result.exitCode ?? 1
 }
 
 /*  helper to update an externally managed tool with exactly the package
@@ -283,7 +284,7 @@ const self = async (...args: string[]): Promise<number> => {
         stdio:  "inherit",
         reject: false
     })
-    if ((r.exitCode ?? 0) !== 0)
+    if ((r.exitCode ?? 1) !== 0)
         process.exit(r.exitCode ?? 1)
     return r.exitCode ?? 0
 }
@@ -333,7 +334,10 @@ const pruneClaudeVersions = (active: string | null): void => {
     const versionsDir = path.join(HOME, ".local/share/claude/versions")
     if (!fs.existsSync(versionsDir))
         return
-    for (const f of fs.readdirSync(versionsDir)) {
+    const versions = fs.readdirSync(versionsDir)
+    if (!versions.includes(active))
+        return
+    for (const f of versions) {
         if (f === active)
             continue
         try {
@@ -349,6 +353,8 @@ const pruneClaudeVersions = (active: string | null): void => {
 const detectActiveClaudeVersion = (binName: string): string | null => {
     try {
         const r = execaSync(path.join(HOME, ".local/bin", binName), [ "--version" ], { reject: false })
+        if (r.exitCode !== 0)
+            return null
         const m = /^(\S+)/.exec(r.stdout ?? "")
         if (m)
             return m[1]
@@ -392,12 +398,12 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "tmux", "lazygit", "git")
 
         info("install Node.js")
-        await self("internal", "capsula", "-s", "sudo", "-E", "bash", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
+        await self("internal", "capsula", "-s", "sudo", "-E", "bash", "-o", "pipefail", "-c", "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -")
         await self("internal", "capsula", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "nodejs")
         await self("internal", "capsula", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "binutils", "gcc", "g++", "make")
 
         info("install Claude Code")
-        await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -fsSL https://claude.ai/install.sh | bash`)
+        await self("internal", "capsula", "bash", "-o", "pipefail", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -fsSL https://claude.ai/install.sh | bash`)
 
         info("install ANSI-Recolor")
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=node-pty,tty-attr", "ansi-recolor")
@@ -420,6 +426,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             "[ -d \"$VERSIONS\" ] || exit 0; " +
             "ACTIVE=$(\"$HOME/.local/bin/claude\" --version 2>/dev/null | awk '{print $1; exit}'); " +
             "[ -n \"$ACTIVE\" ] || exit 0; " +
+            "[ -f \"$VERSIONS/$ACTIVE\" ] || exit 0; " +
             "find \"$VERSIONS\" -mindepth 1 -maxdepth 1 ! -name \"$ACTIVE\" -exec rm -rf {} +"
         )
     }
@@ -489,7 +496,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
                 "windows:choco":  "choco install -y --accept-license --no-progress nodejs",
                 "macos:ports":    "sudo port -N install nodejs26 npm11",
                 "macos:brew":     "brew install node",
-                "linux:apt":      "curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash - && sudo apt install -y nodejs",
+                "linux:apt":      [ "bash", "-o", "pipefail", "-c", "curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash - && sudo apt install -y nodejs" ],
                 "linux:dnf":      "sudo dnf install -y nodejs npm",
                 "linux:yum":      "sudo yum install -y nodejs npm",
                 "linux:zypper":   "sudo zypper --non-interactive install nodejs npm",
@@ -535,8 +542,8 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             /*  run installation script  */
             ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
             ensureTool("curl", { hint: "https://curl.se/" })
-            await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -fsSL https://claude.ai/install.sh | bash` ], {
-                stdio: "inherit", reject: false
+            await execa("bash", [ "-o", "pipefail", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -fsSL https://claude.ai/install.sh | bash` ], {
+                stdio: "inherit"
             })
 
             /*  prune obsolete versions only after successful install  */
@@ -549,7 +556,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             /*  run installation script  */
             ensureTool("powershell")
             await execa("powershell", [ "-NoProfile", "-Command", "irm https://claude.ai/install.ps1 | iex" ], {
-                stdio: "inherit", reject: false
+                stdio: "inherit"
             })
 
             /*  prune obsolete versions only after successful install  */
@@ -678,7 +685,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         if (process.platform !== "win32") {
             ensureTool("bash")
             await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update` ], {
-                stdio: "inherit", reject: false
+                stdio: "inherit"
             })
 
             /*  prune obsolete versions only after successful update  */
@@ -689,7 +696,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
                 fatal("on Windows the \"update\" command has to be run from within a PowerShell session")
             ensureTool("powershell")
             await execa("powershell", [ "-NoProfile", "-Command", "claude update" ], {
-                stdio: "inherit", reject: false
+                stdio: "inherit"
             })
 
             /*  prune obsolete versions only after successful update  */
@@ -743,7 +750,7 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
     }
     conf = conf.replace(/@USER@/g, USER)
     const confFile = path.join(os.tmpdir(), `claudex-tmux-${process.pid}.conf`)
-    fs.writeFileSync(confFile, conf, { mode: 0o600 })
+    fs.writeFileSync(confFile, conf, { mode: 0o600, flag: "wx" })
     /*  ensure the temp config is removed on normal exit AND on signal-driven
         termination (SIGINT/SIGTERM); SIGKILL and process panics remain
         uncoverable. tmux.conf is read once at startup and not re-read via
@@ -764,7 +771,7 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
         windowsHide:  false
     })
     cleanup()
-    return process.exit(r.exitCode ?? 0)
+    return process.exit(r.exitCode ?? 1)
 }
 
 /*  action: internal "shell" -- spawn an interactive login shell  */
@@ -835,6 +842,8 @@ const actionInternalCapsula = (_opts: TopOpts, args: string[]): never => {
     const envOpts: string[] = [ "-e", "!" ]
     for (const e of envs)
         envOpts.push("-e", e)
+    if (process.env.OPENROUTER_API_KEY !== undefined)
+        envOpts.push("-e", "OPENROUTER_API_KEY")
 
     /*  find list of dot-files (relative to $HOME)  */
     const dotfiles = [
@@ -947,7 +956,7 @@ const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
 }
 
 /*  action: top-level command -- run "claude"  */
-const actionDefault = (opts: TopOpts, args: string[]): never => {
+const actionDefault = async (opts: TopOpts, args: string[]): Promise<never> => {
     /*  build the inner self-invocation flag list. Pass-through "-R"/"-A" only,
         as "-C" and "-T" are consumed at the outer layer to avoid recursion.  */
     const innerFlags: string[] = []
@@ -986,14 +995,20 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
 
                 /*  enter already running container and run tmux  */
                 return execInherit("docker", [
-                    "exec", "-i", "-t", "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`, container,
+                    "exec", "-i", ...(process.stdin.isTTY ? [ "-t" ] : []),
+                    "-w", process.cwd(),
+                    "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`,
+                    ...(process.env.OPENROUTER_API_KEY !== undefined ? [ "-e", "OPENROUTER_API_KEY" ] : []),
+                    container,
                     "bash", "-c",
                     `TERM=${shQ.quote([ TERM ])} ` +
                     `HOME=${shQ.quote([ HOME ])} ` +
                     `CLAUDEX_FLAGS=${shQ.quote([ claudexFlags ])} ` +
+                    `CLAUDEX_INTERNAL_EXEC=${shQ.quote([ inPane ])} ` +
                     `sudo -E -u ${shQ.quote([ USER ])} ` +
                     `${shQ.quote([ "node" /* process.execPath is not valid inside container! */, selfPathJS ])} ` +
-                    `${opts.ase ? "-A " : ""}internal tmux new-session -A -s ${shQ.quote([ session ])}`
+                    `${opts.ase ? "-A " : ""}internal tmux new-session -A -s ${shQ.quote([ session ])} ` +
+                    `-n claude ${shQ.quote([ "claudex internal exec" ])}`
                 ])
             }
             else {
@@ -1041,7 +1056,11 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
 
             /*  enter already running container and run claude (single-quote shell-escape)  */
             return execInherit("docker", [
-                "exec", "-i", "-t", "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`, container,
+                "exec", "-i", ...(process.stdin.isTTY ? [ "-t" ] : []),
+                "-w", process.cwd(),
+                "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`,
+                ...(process.env.OPENROUTER_API_KEY !== undefined ? [ "-e", "OPENROUTER_API_KEY" ] : []),
+                container,
                 "bash", "-c",
                 `TERM=${shQ.quote([ TERM ])} ` +
                 `HOME=${shQ.quote([ HOME ])} ` +
@@ -1066,7 +1085,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
     const recolor = opts.recolor === true
     if (recolor)
         ensureTool("ansi-recolor")
-    process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
+    process.env.PATH = `${path.join(HOME, ".local/bin")}${path.delimiter}${process.env.PATH ?? ""}`
     ensureTool("claude")
     const env: Env = { ...process.env }
     const claudeModel = process.env.CLAUDE_MODEL ?? ""
@@ -1161,10 +1180,69 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         env.DISABLE_LOGOUT_COMMAND           = "1"
         env.ENABLE_TOOL_SEARCH               = "auto"
     }
+    else if (/^codex:/.test(claudeModel)) {
+        const model = claudeModel.slice("codex:".length)
+        if (model.trim() === "")
+            fatal("invalid CLAUDE_MODEL: missing model name in " +
+                `"${claudeModel}" (expected: codex:<model>)`)
+
+        /*  reuse a healthy proxy or start a persistent detached server  */
+        const baseURL = "http://127.0.0.1:18765"
+        const deadline = Date.now() + 10000
+        let proxy: ReturnType<typeof spawn> | undefined
+        let proxyError = ""
+        while (true) {
+            try {
+                const response = await fetch(`${baseURL}/healthz`, { signal: AbortSignal.timeout(500) })
+                await response.body?.cancel()
+                if (response.ok)
+                    break
+            }
+            catch (_e) {
+                /*  not ready yet  */
+            }
+            if (proxy === undefined) {
+                ensureTool("claude-code-proxy", { hint: "install claude-code-proxy and configure its Codex authentication first" })
+                proxy = spawn("claude-code-proxy", [ "serve", "--port", "18765", "--no-monitor" ], {
+                    detached:    true,
+                    stdio:       "ignore",
+                    windowsHide: true
+                })
+                proxy.on("error", (err: Error) => { proxyError = err.message })
+                proxy.unref()
+            }
+            else if (proxyError !== "" || proxy.exitCode !== null || proxy.signalCode !== null)
+                fatal("failed to start claude-code-proxy" +
+                    (proxyError !== "" ? `: ${proxyError}` : ` (exit ${proxy.exitCode ?? proxy.signalCode})`) +
+                    " -- run \"claude-code-proxy serve --port 18765 --no-monitor\" for details")
+            if (Date.now() >= deadline) {
+                proxy.kill()
+                fatal(`claude-code-proxy did not become ready at ${baseURL} within 10 seconds`)
+            }
+            await new Promise((resolve) => setTimeout(resolve, 100))
+        }
+
+        /*  override Claude Code configuration as in the claude-codex wrapper  */
+        env.ANTHROPIC_BASE_URL                         = baseURL
+        env.ANTHROPIC_API_KEY                          = ""
+        env.ANTHROPIC_AUTH_TOKEN                       = "unused"
+        env.ANTHROPIC_DEFAULT_MODEL                    = model
+        env.ANTHROPIC_DEFAULT_FABLE_MODEL              = "gpt-6-astra[1m]"
+        env.ANTHROPIC_DEFAULT_OPUS_MODEL               = "gpt-6.1-sol[1m]"
+        env.ANTHROPIC_DEFAULT_SONNET_MODEL             = "gpt-6-luna[1m]"
+        env.ANTHROPIC_DEFAULT_HAIKU_MODEL              = "gpt-6-luna[1m]"
+        env.CLAUDE_CODE_SUBAGENT_MODEL                 = "inherit"
+        env.CLAUDE_CODE_AUTO_COMPACT_WINDOW            = "272000"
+        env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC   = "1"
+        env.CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK  = "1"
+        env.DISABLE_LOGIN_COMMAND                      = "1"
+        env.DISABLE_LOGOUT_COMMAND                     = "1"
+        env.ENABLE_TOOL_SEARCH                         = "auto"
+    }
     else if (claudeModel !== "")
         fatal(`invalid CLAUDE_MODEL "${claudeModel}" ` +
-            "(supports only: \"ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]\" " +
-            "and \"openrouter:<model>[?[context=<size>],[capabilities=<list>]]\")")
+            "(supports only: \"ollama[://<host>[:<port>]]/<model>[?[context=<size>],[capabilities=<list>]]\", " +
+            "\"openrouter:<model>[?[context=<size>],[capabilities=<list>]]\" and \"codex:<model>\")")
 
     /*  override ASE configuration (for its diagram rendering)  */
     if (opts.ase) {
@@ -1244,7 +1322,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
 /*  action: top-level "-h/--help"  */
 const actionHelp = (): never => {
     /*  run "claude --help"  */
-    process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
+    process.env.PATH = `${path.join(HOME, ".local/bin")}${path.delimiter}${process.env.PATH ?? ""}`
     ensureTool("claude")
     const claudeBin = path.join(HOME, ".local/bin/claude")
     execaSync(claudeBin, [ "--help" ], { reject: false, stdio: [ "ignore", "inherit", "inherit" ] })
@@ -1270,7 +1348,7 @@ const actionHelp = (): never => {
 /*  action: top-level "-v/-V/--version"  */
 const actionVersion = (): never => {
     /*  run "claude --version"  */
-    process.env.PATH = `${HOME}/.local/bin:${process.env.PATH ?? ""}`
+    process.env.PATH = `${path.join(HOME, ".local/bin")}${path.delimiter}${process.env.PATH ?? ""}`
     ensureTool("claude")
     const claudeBin = path.join(HOME, ".local/bin/claude")
     execaSync(claudeBin, [ "--version" ], { reject: false, stdio: [ "ignore", "inherit", "inherit" ] })
@@ -1369,8 +1447,8 @@ const main = async (): Promise<void> => {
         .option("-R, --recolor",        "wrap Claude Code with ANSI recoloring for improved theming")
         .option("-A, --ase",            "enable ASE-specific ASE_* environment variables and Tmux settings")
         .argument("[args...]",          "arguments passed unparsed to Claude Code")
-        .action((args: string[], opts: TopOpts) => {
-            actionDefault(opts, args)
+        .action(async (args: string[], opts: TopOpts) => {
+            await actionDefault(opts, args)
         })
 
     /*  dispatch "install" sub-command  */
