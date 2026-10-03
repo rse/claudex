@@ -184,7 +184,7 @@ const execInherit = (file: string, args: string[], opts: { env?: Env } = {}): ne
 }
 
 /*  helper to execute a platform-specific command  */
-const executeCommand = (config: { [ platform: string ]: string[] | string }, platformOverride?: string) => {
+const executeCommand = (config: { [ platform: string ]: string[] | string }, platformOverride?: string, fatalOnFailure = false) => {
     const platform = platformOverride ?? detectPlatform()
     const osName = platform.split(":")[0]
     const command = config[platform] ?? config[`${osName}:*`] ?? config["*"]
@@ -198,7 +198,10 @@ const executeCommand = (config: { [ platform: string ]: string[] | string }, pla
         reject:       false,
         windowsHide:  false
     })
-    return result.exitCode ?? 1
+    const exitCode = result.exitCode ?? 1
+    if (fatalOnFailure && exitCode !== 0)
+        fatal(`failed to execute "${cmd[0]}" (exit ${exitCode})`)
+    return exitCode
 }
 
 /*  helper to update an externally managed tool with exactly the package
@@ -209,7 +212,7 @@ const updateTool = (tool: string, config: { [ platform: string ]: string[] | str
         info(`skip update of "${tool}" (not provided by MacPorts or Homebrew)`)
         return 0
     }
-    return executeCommand(config, platform)
+    return executeCommand(config, platform, true)
 }
 
 /*  helper to determine whether a global NPM installation requires sudo(8),
@@ -403,7 +406,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "-s", "sudo", "-E", "apt", "install", "-qq", "-y", "binutils", "gcc", "g++", "make")
 
         info("install Claude Code")
-        await self("internal", "capsula", "bash", "-o", "pipefail", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -fsSL https://claude.ai/install.sh | bash`)
+        await self("internal", "capsula", "bash", "-o", "pipefail", "-c", `PATH=${shQ.quote([ path.join(HOME, ".local/bin") ])}:"$PATH"; curl -fsSL https://claude.ai/install.sh | bash`)
 
         info("install ANSI-Recolor")
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=node-pty,tty-attr", "ansi-recolor")
@@ -542,7 +545,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             /*  run installation script  */
             ensureTool("bash", { hint: "https://www.gnu.org/software/bash/" })
             ensureTool("curl", { hint: "https://curl.se/" })
-            await execa("bash", [ "-o", "pipefail", "-c", `PATH="${HOME}/.local/bin:$PATH"; curl -fsSL https://claude.ai/install.sh | bash` ], {
+            await execa("bash", [ "-o", "pipefail", "-c", `PATH=${shQ.quote([ path.join(HOME, ".local/bin") ])}:"$PATH"; curl -fsSL https://claude.ai/install.sh | bash` ], {
                 stdio: "inherit"
             })
 
@@ -587,7 +590,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "-s", "sudo", "apt", "upgrade", "-qq", "-y")
 
         info("update Claude Code")
-        await self("internal", "capsula", "bash", "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update`)
+        await self("internal", "capsula", "bash", "-c", `PATH=${shQ.quote([ path.join(HOME, ".local/bin") ])}:"$PATH"; ${shQ.quote([ path.join(HOME, ".local/bin/claude") ])} update`)
 
         info("update ANSI-Recolor")
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=node-pty,tty-attr", "ansi-recolor")
@@ -664,27 +667,27 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         info("update ANSI-Recolor")
         executeCommand({
             "*": npmInstallGlobal("--allow-scripts=node-pty,tty-attr", "ansi-recolor")
-        })
+        }, undefined, true)
 
         info("update TypeScript-Language-Server")
         executeCommand({
             "*": npmInstallGlobal("typescript-language-server")
-        })
+        }, undefined, true)
 
         info("update CodeBurn")
         executeCommand({
             "*": npmInstallGlobal("codeburn")
-        })
+        }, undefined, true)
 
         info("update ASE")
         executeCommand({
             "*": npmInstallGlobal("@rse/ase")
-        })
+        }, undefined, true)
 
         info("update Claude Code")
         if (process.platform !== "win32") {
             ensureTool("bash")
-            await execa("bash", [ "-c", `PATH="${HOME}/.local/bin:$PATH"; ${HOME}/.local/bin/claude update` ], {
+            await execa("bash", [ "-c", `PATH=${shQ.quote([ path.join(HOME, ".local/bin") ])}:"$PATH"; ${shQ.quote([ path.join(HOME, ".local/bin/claude") ])} update` ], {
                 stdio: "inherit"
             })
 
@@ -762,6 +765,12 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
     process.on("exit",    cleanup)
     process.on("SIGINT",  () => { cleanup(); process.exit(130) })
     process.on("SIGTERM", () => { cleanup(); process.exit(143) })
+
+    /*  pass each new Unix session its own invocation environment  */
+    if (!isPsmux() && args[0] === "new-session")
+        for (const name of [ "CLAUDEX_FLAGS", "CLAUDEX_INTERNAL_EXEC", "CLAUDE_MODEL", "OPENROUTER_API_KEY" ])
+            args.splice(1, 0, "-e", `${name}=${process.env[name] ?? ""}`)
+
     const r = execaSync("tmux", [
         "-f", confFile,
         ...args
@@ -1286,7 +1295,7 @@ const actionDefault = async (opts: TopOpts, args: string[]): Promise<never> => {
             ]
         }
     } as Record<string, unknown>
-    if (opts.tmux) {
+    if (process.env.TMUX) {
         claudeSettings = deepmerge(claudeSettings, {
             "env": {
                 "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
@@ -1365,12 +1374,13 @@ const main = async (): Promise<void> => {
         the top-level "-R"/"-C"/"-T"/"-A" flags by default. Merge env-derived
         flags with the command-line flags (env first, command-line second, so
         the user can extend or override on the command line). Skip for the
-        "internal" sub-dispatch (which uses CLAUDEX_FLAGS_PASSTHROUGH for
-        tmux.conf bind-key flag propagation), and skip flags that are already
-        present on argv to avoid duplicating boolean options.  */
+        "internal" sub-dispatch; tmux.conf bind-keys invoke plain "claudex",
+        whose defaults come from CLAUDEX_FLAGS. Skip flags already present
+        on argv to avoid duplicating boolean options.  */
     {
         const topArgs = process.argv.slice(2)
-        const subcmd = topArgs.find((a) => !a.startsWith("-")) ?? ""
+        const subcmd = topArgs.find((a, i) =>
+            !a.startsWith("-") && (i === 0 || (topArgs[i - 1] !== "-T" && topArgs[i - 1] !== "--tmux"))) ?? ""
         const envFlags = (process.env.CLAUDEX_FLAGS ?? "").trim()
         const claudeNativeSubcmds = [
             "agents", "auth", "auto-mode", "doctor", "mcp",
@@ -1414,7 +1424,19 @@ const main = async (): Promise<void> => {
             }
 
             /*  insert in front of the other arguments  */
-            const toInsert = filtered.filter((t) => !present(t))
+            const toInsert: string[] = []
+            for (let i = 0; i < filtered.length; i++) {
+                const t = filtered[i]
+                const hasSession = (t === "-T" || t === "--tmux")
+                    && i + 1 < filtered.length && !filtered[i + 1].startsWith("-")
+                if (!present(t)) {
+                    toInsert.push(t)
+                    if (hasSession)
+                        toInsert.push(filtered[i + 1])
+                }
+                if (hasSession)
+                    i++
+            }
             if (toInsert.length > 0)
                 process.argv.splice(2, 0, ...toInsert)
         }
@@ -1423,7 +1445,8 @@ const main = async (): Promise<void> => {
     /*  intercept top-level "-h/--help" and "-v/-V/--version" before commander
         grabs them, so we can pass-through to "claude" and append our extension info  */
     const topArgs = process.argv.slice(2)
-    const firstNonFlag = topArgs.findIndex((a) => !a.startsWith("-"))
+    const firstNonFlag = topArgs.findIndex((a, i) =>
+        !a.startsWith("-") && (i === 0 || (topArgs[i - 1] !== "-T" && topArgs[i - 1] !== "--tmux")))
     const headFlags = firstNonFlag < 0 ? topArgs : topArgs.slice(0, firstNonFlag)
     const subcmd = firstNonFlag < 0 ? "" : topArgs[firstNonFlag]
     if ((headFlags.includes("-h") || headFlags.includes("--help"))
@@ -1487,6 +1510,7 @@ const main = async (): Promise<void> => {
         .command("internal")
         .description("internal command dispatcher (tmux, shell, lazygit, ase-task-edit, capsula)")
         .helpOption("-h, --help", "display help for command")
+        .passThroughOptions()
         .allowUnknownOption()
         .argument("[args...]", "internal command name and its arguments")
         .action(async (args: string[], _opts: object, cmd: Command) => {
