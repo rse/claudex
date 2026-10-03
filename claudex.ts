@@ -1111,9 +1111,10 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         env.ANTHROPIC_AUTH_TOKEN             = "ollama"
         env.ANTHROPIC_BASE_URL               = `http://${ohost}`
         env.ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES = capabilities
-        env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
+        env.ANTHROPIC_DEFAULT_FABLE_MODEL    = model
         env.ANTHROPIC_DEFAULT_OPUS_MODEL     = model
         env.ANTHROPIC_DEFAULT_SONNET_MODEL   = model
+        env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
         env.CLAUDE_CODE_SUBAGENT_MODEL       = model
         env.CLAUDE_CODE_ATTRIBUTION_HEADER   = "0"
         env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
@@ -1149,9 +1150,10 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
         env.ANTHROPIC_AUTH_TOKEN             = process.env.OPENROUTER_API_KEY
         env.ANTHROPIC_BASE_URL               = "https://openrouter.ai/api"
         env.ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES = capabilities
-        env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
+        env.ANTHROPIC_DEFAULT_FABLE_MODEL    = model
         env.ANTHROPIC_DEFAULT_OPUS_MODEL     = model
         env.ANTHROPIC_DEFAULT_SONNET_MODEL   = model
+        env.ANTHROPIC_DEFAULT_HAIKU_MODEL    = model
         env.CLAUDE_CODE_SUBAGENT_MODEL       = model
         env.CLAUDE_CODE_ATTRIBUTION_HEADER   = "0"
         env.CLAUDE_CODE_AUTO_COMPACT_WINDOW  = context
