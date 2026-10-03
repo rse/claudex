@@ -986,7 +986,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
 
                 /*  enter already running container and run tmux  */
                 return execInherit("docker", [
-                    "exec", "-i", "-t", container,
+                    "exec", "-i", "-t", "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`, container,
                     "bash", "-c",
                     `TERM=${shQ.quote([ TERM ])} ` +
                     `HOME=${shQ.quote([ HOME ])} ` +
@@ -1041,7 +1041,7 @@ const actionDefault = (opts: TopOpts, args: string[]): never => {
 
             /*  enter already running container and run claude (single-quote shell-escape)  */
             return execInherit("docker", [
-                "exec", "-i", "-t", container,
+                "exec", "-i", "-t", "-e", `CLAUDE_MODEL=${process.env.CLAUDE_MODEL ?? ""}`, container,
                 "bash", "-c",
                 `TERM=${shQ.quote([ TERM ])} ` +
                 `HOME=${shQ.quote([ HOME ])} ` +
