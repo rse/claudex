@@ -9,10 +9,6 @@ gui:
     scrollPastBottom: false
     commitLength:
         show: false
-    authorColors:
-        "*": "blue"
-    branchColorPatterns:
-        "*": "blue"
     tabWidth: 4
     mouseEvents: true
     sidePanelWidth: 0.30
@@ -27,7 +23,7 @@ gui:
     expandFocusedSidePanel: true
     expandedSidePanelWeight: 4
     shrinkSidePanelsToContent: false
-    useHunkModeInStagingView: true
+    useHunkModeInDiffView: true
     theme:
         selectedLineBgColor:
             - reverse
@@ -38,6 +34,10 @@ gui:
             - white
         optionsTextColor:
             - blue
+        authorColors:
+            "*": "blue"
+        branchColorPatterns:
+            "*": "blue"
     sidePanels:
         - [ files ]
         - [ stash ]
