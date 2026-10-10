@@ -17,6 +17,7 @@ export default [
     ...pluginTS.configs.strict,
     ...pluginTS.configs.stylistic,
     ...pluginStd({
+        ts: true,
         ignores: pluginStd.resolveIgnoresFromGitignore()
     }),
     {
