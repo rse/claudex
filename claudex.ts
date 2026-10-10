@@ -292,6 +292,25 @@ const self = async (...args: string[]): Promise<number> => {
     return r.exitCode ?? 0
 }
 
+/*  derive the session/project name from a directory: usually its basename,
+    but for a multi-worktree setup "<basedir>/<branch>/" with an "active"
+    symlink in "<basedir>/" (pointing to one of the worktrees) the name is
+    "<basedir>-<branch>", as the bare branch name (e.g. "master") is not unique  */
+const deriveSessionName = (dir: string): string => {
+    const name   = path.basename(dir)
+    const parent = path.dirname(dir)
+    if (name !== "" && parent !== dir) {
+        try {
+            if (fs.lstatSync(path.join(parent, "active")).isSymbolicLink())
+                return `${path.basename(parent)}-${name}`
+        }
+        catch (_e) {
+            /*  no "active" symlink, so no multi-worktree setup  */
+        }
+    }
+    return name
+}
+
 /*  detect the session/project name by walking up from the current working
     directory looking for an AGENTS.md / CLAUDE.md marker; fall back to the
     basename of the current working directory  */
@@ -299,13 +318,13 @@ const detectSessionName = (): string => {
     let dir = process.cwd()
     while (true) {
         if (fs.existsSync(path.join(dir, "AGENTS.md")) || fs.existsSync(path.join(dir, "CLAUDE.md")))
-            return path.basename(dir)
+            return deriveSessionName(dir)
         const parent = path.dirname(dir)
         if (parent === dir)
             break
         dir = parent
     }
-    const session = path.basename(process.cwd()) || "default"
+    const session = deriveSessionName(process.cwd()) || "default"
     info(`no AGENTS.md/CLAUDE.md marker found; using cwd basename "${session}" as session name`)
     return session
 }
