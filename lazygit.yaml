@@ -80,3 +80,14 @@ os:
     edit: vim {{filename}}
     editAtLine: vim +{{line}} {{filename}}
 
+customCommands:
+    -   key: "s"
+        context: "files"
+        description: "Stash all changes (including untracked)"
+        prompts:
+            -   type: "input"
+                title: "Stash message"
+                key: "Message"
+        command: "git stash push --include-untracked -m {{.Form.Message | quote}}"
+        loadingText: "Stashing..."
+
