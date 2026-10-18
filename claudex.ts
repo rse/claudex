@@ -740,6 +740,8 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
         /*  ASE-specific bind-keys (only when "-A" is in effect)  */
         conf +=
             "bind-key q display-popup -E -w 95% -h 95% -T \"─◀#[reverse] ⧉ Task Edit (ase task edit) #[noreverse]▶\" claudex internal ase-task-edit\n" +
+            "bind-key b display-popup -E -w 95% -h 95% -T \"─◀#[reverse] ⧉ Task Board (ase task board) #[noreverse]▶\" claudex internal ase-task-board\n" +
+            "bind-key B run-shell -b \"claudex internal ase-task-board --web\"\n" +
             "bind-key t send-keys \"/ase:ase-task-id \"\n" +
             "bind-key p send-keys \"/ase:ase-meta-persona \"\n"
     }
@@ -757,7 +759,10 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
             "set-hook   -g -u after-split-window\n" +
             "bind-key g display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Version Control (lazygit) )▶\" claudex internal lazygit\n" +
             "bind-key s display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Shell )▶\"                     claudex internal shell\n" +
-            (opts.ase ? "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" : "")
+            (opts.ase ?
+                "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" +
+                "bind-key b display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Board (ase task board) )▶\" claudex internal ase-task-board\n" +
+                "bind-key B run-shell -b \"claudex internal ase-task-board --web\"\n" : "")
     }
     /*  propagate model-selection environment variables into the tmux
         server's global environment, so that they survive into every pane
@@ -834,6 +839,20 @@ const actionInternalAseTaskEdit = async (_opts: TopOpts): Promise<void> => {
         process.stderr.write("no ASE task id known for this pane yet\n")
         await new Promise((resolve) => setTimeout(resolve, 2000))
     }
+}
+
+/*  action: internal "ase-task-board" -- show the ASE task board (keeping errors visible briefly);
+    with "--web" it runs via tmux "run-shell", so stdout (the URL) is suppressed to avoid tmux view mode  */
+const actionInternalAseTaskBoard = async (_opts: TopOpts, args: string[]): Promise<void> => {
+    ensureTool("ase")
+    const web = args.includes("--web")
+    const r = execaSync("ase", [ "task", "board", ...args ], {
+        stdio:        web ? [ "ignore", "ignore", "inherit" ] : "inherit",
+        reject:       false,
+        windowsHide:  false
+    })
+    if (!web && (r.exitCode ?? 1) !== 0)
+        await new Promise((resolve) => setTimeout(resolve, 2000))
 }
 
 /*  action: internal "lazygit" -- spawn lazygit (optionally recolored)  */
@@ -967,17 +986,18 @@ const actionStats = async (args: string[]): Promise<never> => {
     return execInherit("codeburn", [ "report", "--provider", "claude", "--period", "30days", ...args ])
 }
 
-/*  action: internal sub-dispatch (tmux, shell, ase-task-edit, lazygit, capsula, exec)  */
+/*  action: internal sub-dispatch (tmux, shell, ase-task-edit, ase-task-board, lazygit, capsula, exec)  */
 const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
     const util = args[0]
     const rest = args.slice(1)
     switch (util) {
-        case "tmux":          return actionInternalTmux(opts, rest)
-        case "shell":         return actionInternalShell(opts, rest)
-        case "ase-task-edit": return actionInternalAseTaskEdit(opts)
-        case "lazygit":       return actionInternalLazygit(opts, rest)
-        case "capsula":       return actionInternalCapsula(opts, rest)
-        case "exec":          return actionInternalExec(opts)
+        case "tmux":           return actionInternalTmux(opts, rest)
+        case "shell":          return actionInternalShell(opts, rest)
+        case "ase-task-edit":  return actionInternalAseTaskEdit(opts)
+        case "ase-task-board": return actionInternalAseTaskBoard(opts, rest)
+        case "lazygit":        return actionInternalLazygit(opts, rest)
+        case "capsula":        return actionInternalCapsula(opts, rest)
+        case "exec":           return actionInternalExec(opts)
         default:
             fatal(`invalid internal command "${util ?? ""}"`)
     }
@@ -1530,7 +1550,7 @@ const main = async (): Promise<void> => {
     /*  dispatch "internal" sub-command  */
     program
         .command("internal")
-        .description("internal command dispatcher (tmux, shell, lazygit, ase-task-edit, capsula)")
+        .description("internal command dispatcher (tmux, shell, lazygit, ase-task-edit, ase-task-board, capsula)")
         .helpOption("-h, --help", "display help for command")
         .passThroughOptions()
         .allowUnknownOption()
