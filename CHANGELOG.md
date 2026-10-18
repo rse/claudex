@@ -2,6 +2,51 @@
 ChangeLog
 =========
 
+1.1.6 (2026-10-18)
+------------------
+
+- FEATURE: add tmux key bindings `b`/`B` for ASE Task Board TUI/WUI (`ase task board`)
+- IMPROVEMENT: add LazyGit custom stash command `s` which includes untracked files
+- UPDATE: upgrade NPM dependencies
+
+1.1.5 (2026-10-10)
+------------------
+
+- IMPROVEMENT: derive tmux session name as `<basedir>-<branch>` in multi-worktree setups
+
+1.1.4 (2026-10-10)
+------------------
+
+- BUGFIX: fix popup styling under latest tmux 3.8
+- UPDATE: upgrade NPM dependencies
+
+1.1.3 (2026-10-08)
+------------------
+
+- UPDATE: adapt LazyGit configuration to latest LazyGit (diff view hunk mode, colors)
+- UPDATE: upgrade NPM dependencies
+
+1.1.2 (2026-10-03)
+------------------
+
+- IMPROVEMENT: disable claude.ai MCP servers for foreign LLM providers
+
+1.1.1 (2026-10-03)
+------------------
+
+- BUGFIX: pass `CLAUDE_MODEL`, `CLAUDEX_FLAGS` and API keys into new tmux sessions
+- BUGFIX: correctly handle session name argument of `-T` in `CLAUDEX_FLAGS` processing
+- BUGFIX: fail fatally on failed Claude Code install/update commands
+- CLEANUP: properly quote paths in Claude Code install/update shell commands
+
+1.1.0 (2026-10-03)
+------------------
+
+- FEATURE: add support for OpenAI GPT models via `codex:` `CLAUDE_MODEL` and `claude-code-proxy`
+- IMPROVEMENT: explicitly map Fable model for foreign LLM providers
+- IMPROVEMENT: improve ordering of side panels in LazyGit
+- BUGFIX: correctly pass-through `CLAUDE_MODEL` to Docker container
+
 1.0.17 (2026-09-28)
 -------------------
 
@@ -26,10 +71,11 @@ ChangeLog
 
 - BUGFIX: do not use sudo if not really required
 
-1.0.13 (2026-08-04)
+1.0.13 (2026-08-06)
 -------------------
 
 - IMPROVEMENT: pass-through --version option to Claude Code and just extend with own version information
+- IMPROVEMENT: improve LazyGit configuration
 
 1.0.12 (2026-08-02)
 -------------------
@@ -67,8 +113,8 @@ ChangeLog
 1.0.7 (2026-05-22)
 ------------------
 
-- UPDATE: upgrade to Node 26
 - IMPROVEMENT: add support for `@ase_agent_status` variable
+- UPDATE: upgrade to Node 26
 
 1.0.6 (2026-05-13)
 ------------------
@@ -91,7 +137,7 @@ ChangeLog
 1.0.3 (2026-05-10)
 ------------------
 
-- BUGFIX: ignore global -T (tmux) option of claude -p (print) option is present
+- BUGFIX: ignore global -T (tmux) option if claude -p (print) option is present
 
 1.0.2 (2026-05-10)
 ------------------
@@ -163,11 +209,6 @@ ChangeLog
 0.9.18 (2026-05-09)
 -------------------
 
-- BUGFIX: try to workaround problems again in self-reference under Windows
-
-0.9.18 (2026-05-09)
--------------------
-
 - BUGFIX: try to workaround problems in self-reference under Windows
 
 0.9.17 (2026-05-09)
@@ -202,7 +243,6 @@ ChangeLog
 0.9.13 (2026-05-09)
 -------------------
 
-- REFACTOR: major refactoring by using commander.js to make `claudex` a seamless wrapper around `claude` only
 - IMPROVEMENT: switch to `CTRL+a s` for starting the shell and support PowerShell, too
 - IMPROVEMENT: support `SHELL` env variable
 - IMPROVEMENT: support `CLAUDEX_PKG` for forcing a particular package manager
@@ -216,6 +256,7 @@ ChangeLog
 - BUGFIX: fallback value for session
 - CLEANUP: remove obsolete information
 - CLEANUP: escape strings on interpolation
+- REFACTOR: major refactoring by using commander.js to make `claudex` a seamless wrapper around `claude` only
 
 0.9.12 (2026-05-08)
 -------------------
