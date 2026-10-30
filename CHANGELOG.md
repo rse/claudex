@@ -2,6 +2,12 @@
 ChangeLog
 =========
 
+1.1.8 (2026-10-31)
+------------------
+
+- IMPROVEMENT: use dedicated tmux(1) socket to no interfere with regular tmux usages
+- UPDATE: upgrade NPM dependencies
+
 1.1.7 (2026-10-18)
 ------------------
 
