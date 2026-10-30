@@ -795,7 +795,10 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
         for (const name of [ "CLAUDEX_FLAGS", "CLAUDEX_INTERNAL_EXEC", "CLAUDE_MODEL", "OPENROUTER_API_KEY" ])
             args.splice(1, 0, "-e", `${name}=${process.env[name] ?? ""}`)
 
+    /*  use a dedicated server socket on Unix, so our configuration neither
+        leaks into nor gets shadowed by the user's regular tmux server  */
     const r = execaSync("tmux", [
+        ...(!isPsmux() ? [ "-L", "claudex" ] : []),
         "-f", confFile,
         ...args
     ], {
