@@ -2,6 +2,14 @@
 ChangeLog
 =========
 
+1.1.9 (2026-11-06)
+------------------
+
+- FEATURE: add tmux keys `t`/`T` for ASE task of pane in popup/top pane (`ase task board --task`)
+- IMPROVEMENT: change tmux key binding `B` to ASE Task Board TUI in top pane and move WUI to `W`
+- IMPROVEMENT: name tmux panes of keys `B`/`T` "ASE Task Board" and "ASE Task Board: Task Edit"
+- IMPROVEMENT: open tmux panes of keys `B`/`T` with 60% of the window height
+
 1.1.8 (2026-10-31)
 ------------------
 
