@@ -437,7 +437,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
 
         info("install ASE")
-        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "@rse/ase")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=fsevents", "@rse/ase")
 
         info("install Claude wrapper")
         await self("internal", "capsula", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
@@ -555,7 +555,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         ensureTool("ase", {
             hint: "https://ase.tools",
             install: {
-                "*": npmInstallGlobal("@rse/ase")
+                "*": npmInstallGlobal("--allow-scripts=fsevents", "@rse/ase")
             }
         })
 
@@ -621,7 +621,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
 
         info("update ASE")
-        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "@rse/ase")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=fsevents", "@rse/ase")
 
         info("update Claude wrapper")
         await self("internal", "capsula", "-s", "sudo", "install", "-c", "-m", "755", `${basedir}/claude`, "/usr/bin/claude")
@@ -700,7 +700,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
 
         info("update ASE")
         executeCommand({
-            "*": npmInstallGlobal("@rse/ase")
+            "*": npmInstallGlobal("--allow-scripts=fsevents", "@rse/ase")
         }, undefined, true)
 
         info("update Claude Code")
