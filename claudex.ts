@@ -745,7 +745,9 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
             "bind-key W run-shell -b \"claudex internal ase-task-board --web\"\n" +
             "bind-key t display-popup -E -w 95% -h 95% -T \"─◀#[reverse] ⧉ Task View (ase task board --task) #[noreverse]▶\" claudex internal ase-task-view\n" +
             "bind-key T split-window -c \"#{pane_current_path}\" -v -f -b -l 60% \"claudex internal ase-task-view --last\" \\; select-pane -T \"ASE Task Board: Task Edit\"\n" +
-            "bind-key p send-keys \"/ase:ase-meta-persona \"\n"
+            "bind-key p send-keys \"/ase:ase-meta-config set agent.persona \"\n" +
+            "bind-key i send-keys \"/ase:ase-task-id \"\n" +
+            "bind-key e send-keys \"/ase:ase-task-edit \"\n"
     }
     if (isPsmux()) {
         /*  psmux does not honor the reverse ANSI sequence in at least the statusline

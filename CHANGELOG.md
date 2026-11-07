@@ -2,6 +2,13 @@
 ChangeLog
 =========
 
+1.1.11 (2026-11-07)
+-------------------
+
+- FEATURE: add tmux key `i` for typing `/ase:ase-task-id ` into the current pane
+- FEATURE: add tmux key `e` for typing `/ase:ase-task-edit ` into the current pane
+- IMPROVEMENT: change tmux key `p` to type `/ase:ase-meta-config set agent.persona `
+
 1.1.9 (2026-11-06)
 ------------------
 
