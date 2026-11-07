@@ -516,7 +516,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
             install: {
                 "windows:winget": "winget install --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
                 "windows:choco":  "choco install -y --accept-license --no-progress nodejs",
-                "macos:ports":    "sudo port -N install nodejs26 npm11",
+                "macos:ports":    "sudo port -N install nodejs26 npm12",
                 "macos:brew":     "brew install node",
                 "linux:apt":      [ "bash", "-o", "pipefail", "-c", "curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash - && sudo apt install -y nodejs" ],
                 "linux:dnf":      "sudo dnf install -y nodejs npm",
@@ -673,7 +673,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         updateTool("node", {
             "windows:winget": "winget upgrade --accept-package-agreements --accept-source-agreements --silent -e --id OpenJS.NodeJS.LTS",
             "windows:choco":  "choco upgrade -y --accept-license --no-progress nodejs",
-            "macos:ports":    "sudo port -N upgrade nodejs26 npm11",
+            "macos:ports":    "sudo port -N upgrade nodejs26 npm12",
             "macos:brew":     "brew upgrade node",
             "linux:apt":      "sudo apt install --only-upgrade -y nodejs",
             "linux:dnf":      "sudo dnf upgrade -y nodejs npm",
