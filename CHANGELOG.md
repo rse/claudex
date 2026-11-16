@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.1.12 (2026-11-15)
+-------------------
+
+- IMPROVEMENT: map ANSI color 68 to blue in `ansi-recolor` theme for Claude Code
+
 1.1.11 (2026-11-07)
 -------------------
 
