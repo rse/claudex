@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.1.13 (2026-11-16)
+-------------------
+
+- BUGFIX: skip `ansi-recolor` wrapping (`-R`) in print mode (`-p`) or with non-TTY stdout
+
 1.1.12 (2026-11-15)
 -------------------
 

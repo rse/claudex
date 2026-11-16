@@ -1151,8 +1151,12 @@ const actionDefault = async (opts: TopOpts, args: string[]): Promise<never> => {
     }
 
     /*  branch: plain claude -- execute Claude Code, optionally
-        wrapped with ansi-recolor when "-R" was given  */
+        wrapped with ansi-recolor when "-R" was given (but never in
+        non-interactive print mode or with a non-TTY stdout, as recoloring
+        through a PTY would merge stdout/stderr and break piped output)  */
     const recolor = opts.recolor === true
+        && process.stdout.isTTY === true
+        && !args.includes("-p") && !args.includes("--print")
     if (recolor)
         ensureTool("ansi-recolor")
     process.env.PATH = `${path.join(HOME, ".local/bin")}${path.delimiter}${process.env.PATH ?? ""}`
