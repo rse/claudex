@@ -431,7 +431,7 @@ const actionInstall = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=node-pty,tty-attr", "ansi-recolor")
 
         info("install TypeScript LS")
-        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server typescript")
 
         info("install CodeBurn")
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
@@ -615,7 +615,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "--allow-scripts=node-pty,tty-attr", "ansi-recolor")
 
         info("update TypeScript LS")
-        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server")
+        await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "typescript-language-server typescript")
 
         info("update CodeBurn")
         await self("internal", "capsula", "-s", "sudo", "-E", "npm", "install", "-y", "-g", "codeburn")
@@ -690,7 +690,7 @@ const actionUpdate = async (capsula: boolean): Promise<void> => {
 
         info("update TypeScript-Language-Server")
         executeCommand({
-            "*": npmInstallGlobal("typescript-language-server")
+            "*": npmInstallGlobal("typescript-language-server typescript")
         }, undefined, true)
 
         info("update CodeBurn")
