@@ -6,6 +6,13 @@ ChangeLog
 -------------------
 
 - FEATURE: add tmux key `C` for a new pane with a fork of the Claude Code session of the current pane
+- FEATURE: add back tmux key `f` for `lf` file browser popup (with `bat`/`timg` preview, recolored)
+
+1.1.14 (2026-11-19)
+-------------------
+
+- BUGFIX: install/update `typescript` together with `typescript-language-server`, as the LSP needs it
+- UPDATE: upgrade NPM dependencies
 
 1.1.13 (2026-11-16)
 -------------------
