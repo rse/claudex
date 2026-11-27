@@ -1,0 +1,15 @@
+#!/bin/sh
+
+case "$1" in
+    *.gif | *.png | *.jpg | *.svg )
+        exec timg "$1"
+        ;;
+    * )
+        exec bat \
+            --paging=never \
+            --style=numbers \
+            --terminal-width "$(($2 - 5))" \
+            -f "$1"
+        ;;
+esac
+

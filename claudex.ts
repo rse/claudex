@@ -762,6 +762,7 @@ const actionInternalTmux = (opts: TopOpts, args: string[]): never => {
             "set-hook   -g -u pane-exited\n" +
             "set-hook   -g -u after-split-window\n" +
             "bind-key g display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Version Control (lazygit) )▶\" claudex internal lazygit\n" +
+            "bind-key f display-popup -E -w 95% -h 95% -T \"─◀( ⧉ File Browser (lf) )▶\"         claudex internal lf\n" +
             "bind-key s display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Shell )▶\"                     claudex internal shell\n" +
             (opts.ase ?
                 "bind-key q display-popup -E -w 95% -h 95% -T \"─◀( ⧉ Task Edit (ase task edit) )▶\" claudex internal ase-task-edit\n" +
@@ -874,6 +875,32 @@ const actionInternalAseTaskView = async (opts: TopOpts, args: string[]): Promise
         process.stderr.write("no ASE task id known for this pane yet\n")
         await new Promise((resolve) => setTimeout(resolve, 2000))
     }
+}
+
+/*  action: internal "lf" -- spawn lf (optionally recolored)  */
+const actionInternalLF = (opts: TopOpts, args: string[]): never => {
+    ensureTool("bat")
+    ensureTool("lf")
+    const env: Env = { ...process.env, TERM: "xterm-color" }
+
+    /*  pass the absolute previewer path, double-quoted and escaped for lf's command parser  */
+    const previewer = path.join(basedir, "lf-preview").replace(/[\\"]/g, "\\$&")
+    const lfArgs = [
+        "-config",  path.join(basedir, "lf.conf"),
+        "-command", `set previewer "${previewer}"`,
+        ...args
+    ]
+    if (opts.recolor) {
+        ensureTool("ansi-recolor")
+        return execInherit("ansi-recolor", [
+            "-c", path.join(basedir, "ansi-recolor.conf"),
+            "-m",
+            "-n", "lf",
+            "-t", path.join(HOME, "ansi-recolor.txt"),
+            "lf", ...lfArgs
+        ], { env })
+    }
+    return execInherit("lf", lfArgs, { env })
 }
 
 /*  action: internal "lazygit" -- spawn lazygit (optionally recolored)  */
@@ -1018,6 +1045,7 @@ const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
         case "ase-task-board": return actionInternalAseTaskBoard(opts, rest)
         case "ase-task-view":  return actionInternalAseTaskView(opts, rest)
         case "lazygit":        return actionInternalLazygit(opts, rest)
+        case "lf":             return actionInternalLF(opts, rest)
         case "capsula":        return actionInternalCapsula(opts, rest)
         case "exec":           return actionInternalExec(opts)
         default:
@@ -1576,7 +1604,7 @@ const main = async (): Promise<void> => {
     /*  dispatch "internal" sub-command  */
     program
         .command("internal")
-        .description("internal command dispatcher (tmux, shell, lazygit, ase-task-edit, ase-task-board, ase-task-view, capsula)")
+        .description("internal command dispatcher (tmux, shell, lazygit, lf, ase-task-edit, ase-task-board, ase-task-view, capsula)")
         .helpOption("-h, --help", "display help for command")
         .passThroughOptions()
         .allowUnknownOption()
