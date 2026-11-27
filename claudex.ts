@@ -877,6 +877,37 @@ const actionInternalAseTaskView = async (opts: TopOpts, args: string[]): Promise
     }
 }
 
+/*  action: internal "claude-session" -- Claude Code "SessionStart" hook,
+    recording the session id of the current tmux pane as the pane option "@claudex_session_id"  */
+const actionInternalClaudeSession = async (_opts: TopOpts): Promise<void> => {
+    let input = ""
+    for await (const chunk of process.stdin)
+        input += String(chunk)
+    let sid = ""
+    try {
+        sid = (JSON.parse(input) as { session_id?: string }).session_id ?? ""
+    }
+    catch (_e) {
+        /*  ignore  */
+    }
+    const pane = process.env.TMUX_PANE ?? ""
+    if (/^[0-9a-zA-Z-]+$/.test(sid))
+        execaSync("tmux", [ "set-option", "-p", ...(pane !== "" ? [ "-t", pane ] : []), "@claudex_session_id", sid ], { reject: false })
+}
+
+/*  action: internal "claude-fork" -- run Claude Code in a freshly split pane
+    with a fork of the Claude Code session of the previously active pane  */
+const actionInternalClaudeFork = async (_opts: TopOpts): Promise<void> => {
+    const r1 = execaSync("tmux", [ "display-message", "-p", "-t", "{last}", "#{@claudex_session_id}" ], { reject: false })
+    const sid = (r1.stdout ?? "").trim()
+    if (sid !== "")
+        execInherit(process.execPath, [ selfPathJS, "--fork-session", "--resume", sid ])
+    else {
+        process.stderr.write("no Claude Code session id known for previous pane\n")
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+    }
+}
+
 /*  action: internal "lf" -- spawn lf (optionally recolored)  */
 const actionInternalLF = (opts: TopOpts, args: string[]): never => {
     ensureTool("bat")
@@ -1034,7 +1065,8 @@ const actionStats = async (args: string[]): Promise<never> => {
     return execInherit("codeburn", [ "report", "--provider", "claude", "--period", "30days", ...args ])
 }
 
-/*  action: internal sub-dispatch (tmux, shell, ase-task-edit, ase-task-board, ase-task-view, lazygit, capsula, exec)  */
+/*  action: internal sub-dispatch (tmux, shell, ase-task-edit, ase-task-board, ase-task-view,
+    claude-session, claude-fork, lazygit, lf, capsula, exec)  */
 const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
     const util = args[0]
     const rest = args.slice(1)
@@ -1044,6 +1076,8 @@ const actionInternal = async (opts: TopOpts, args: string[]): Promise<void> => {
         case "ase-task-edit":  return actionInternalAseTaskEdit(opts)
         case "ase-task-board": return actionInternalAseTaskBoard(opts, rest)
         case "ase-task-view":  return actionInternalAseTaskView(opts, rest)
+        case "claude-session": return actionInternalClaudeSession(opts)
+        case "claude-fork":    return actionInternalClaudeFork(opts)
         case "lazygit":        return actionInternalLazygit(opts, rest)
         case "lf":             return actionInternalLF(opts, rest)
         case "capsula":        return actionInternalCapsula(opts, rest)
@@ -1399,6 +1433,16 @@ const actionDefault = async (opts: TopOpts, args: string[]): Promise<never> => {
             "teammateMode": "tmux",
             "preferences": {
                 "tmuxSplitPanes": true
+            },
+
+            /*  record the session id in the tmux pane (for forking it via tmux key "C")  */
+            "hooks": {
+                "SessionStart": [ {
+                    "hooks": [ {
+                        "type":    "command",
+                        "command": shQ.quote([ process.execPath, selfPathJS, "internal", "claude-session" ])
+                    } ]
+                } ]
             }
         })
     }
@@ -1604,7 +1648,7 @@ const main = async (): Promise<void> => {
     /*  dispatch "internal" sub-command  */
     program
         .command("internal")
-        .description("internal command dispatcher (tmux, shell, lazygit, lf, ase-task-edit, ase-task-board, ase-task-view, capsula)")
+        .description("internal command dispatcher (tmux, shell, lazygit, lf, ase-task-edit, ase-task-board, ase-task-view, claude-session, claude-fork, capsula)")
         .helpOption("-h, --help", "display help for command")
         .passThroughOptions()
         .allowUnknownOption()

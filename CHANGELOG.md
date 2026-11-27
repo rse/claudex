@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+1.1.15 (2026-11-27)
+-------------------
+
+- FEATURE: add tmux key `C` for a new pane with a fork of the Claude Code session of the current pane
+
 1.1.13 (2026-11-16)
 -------------------
 
